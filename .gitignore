@@ -1,0 +1,11 @@
+*.so
+*.o
+*.a
+*.tar
+*.cmake
+gen/
+build/
+Makefile
+CMakeFiles
+.history
+.vscode
