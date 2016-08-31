@@ -15,7 +15,7 @@ mechanism in Mesos which only works when frameworks adopt it.
 Installation
 ---
 
-1. Install the module library (example: `libofferfilterallocator-1.0.1-c52cdba.so`) on your masters
+1. Install the module library (example: `libofferfilterallocator-1.0.1-62679d0.so`) on your masters
    - _location is your choice--you'll point to it in configuration_
 2. Configure the `--modules` command-line arg, or `MESOS_MODULES` env variable to use the module
    - example: `--modules=file:///path-to-modules.json`
@@ -25,7 +25,7 @@ Installation
       "libraries":
       [
         {
-          "file": "/path/to/libofferfilterallocator-1.0.1-c52cdba.so",
+          "file": "/path/to/libofferfilterallocator-1.0.1-62679d0.so",
           "modules":
           [
             {
@@ -103,7 +103,7 @@ Usage
 Contributing
 ---
 
-  #### Prerequisites
+   #### Prerequisites
 
    - `docker-machine` [0.8+] (if running on OSX or Windows)
        - `docker-for-mac` and `docker-for-windows` are not easily configured with the `libprocess` internals
@@ -111,20 +111,21 @@ Contributing
        - a machine named `mesos-modules` will be created (if not found); configure this name in `./docker-machine-env.sh`
 
    #### Configuring
+
    Edit the top section of `./CMakeLists.txt`
+
    #### Building:
-   TL;DR: run this -->
+
    ```
    ./build.sh
    ```
+
    #### Testing:
-   TL;DR: run this -->
+
    ```
    ./test.sh
    ```
-   Which will run a `docker-compose`-based mesos cluster on a single docker machine.
-   Use `docker-machine ip mesos-modules` to find the ip of this machine.
-   View the help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`
-
+   - _runs a `docker-compose`-based mesos cluster on a single docker machine_
+   - _View the help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`_
 
 ----
