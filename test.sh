@@ -5,27 +5,27 @@ if [[ -z ${action} ]]; then
   action="start"
 fi
 
-if [[ "start" == "${action}" ]]; then
-  source docker/docker-machine-env.sh
-  export MESOS_ALLOCATOR_NAME=$(cat CMakeLists.txt | grep 'MODULE_NAME' | awk -F '[() ]' '{print $3}')
+source docker/docker-env.sh
+export MESOS_ALLOCATOR_NAME=$(cat CMakeLists.txt | grep 'MODULE_NAME' | head -1 | awk -F '[() ]' '{print $3}')
+export MESOS_VERSION=$(cat CMakeLists.txt | grep 'MESOS_VERSION' | head -1 | awk -F '[() ]' '{print $3}')
+export DOCKER_COMPOSE="docker-compose --file docker/docker-compose.${MESOS_VERSION}.test.yml"
 
-  docker-compose --file docker/docker-compose.test.yml up -d
+if [[ "start" == "${action}" ]]; then
+
+  ${DOCKER_COMPOSE} up -d
 
 elif [[ "stop" == "${action}" ]]; then
-  source docker/docker-machine-env.sh
-  export MESOS_ALLOCATOR_NAME=$(cat CMakeLists.txt | grep 'MODULE_NAME' | awk -F '[() ]' '{print $3}')
 
-  docker-compose --file docker/docker-compose.test.yml kill
-  docker-compose --file docker/docker-compose.test.yml rm -f
+  ${DOCKER_COMPOSE} kill
+  ${DOCKER_COMPOSE} rm -f
 
 elif [[ "logs" == "${action}" ]]; then
 
-  source docker/docker-machine-env.sh
-  export MESOS_ALLOCATOR_NAME=$(cat CMakeLists.txt | grep 'MODULE_NAME' | awk -F '[() ]' '{print $3}')
   shift
-  docker-compose --file docker/docker-compose.test.yml logs -f $*
+  ${DOCKER_COMPOSE} logs -f $*
 
 else
+
   echo "Unknown action: ${action}; supported actions are 'start', 'stop', 'logs'"
   exit 1
 fi
