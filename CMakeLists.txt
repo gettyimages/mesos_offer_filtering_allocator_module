@@ -4,9 +4,7 @@ cmake_minimum_required(VERSION 3.3)
 project(offerfilterallocator)
 set(MODULE_NAME im_getty_mesos_OfferFilteringAllocator)
 # Match mesos version against which this build is targeted
-set(VERSION_MAJOR 1)
-set(VERSION_MINOR 0)
-set(VERSION_PATCH 1)
+set(MESOS_VERSION 1.0.1)
 ## ------- END: customization
 
 execute_process(
@@ -15,7 +13,7 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${BUILD_ID}")
+set(VERSION_STRING "${MESOS_VERSION}-${BUILD_ID}")
 message(STATUS "Building Version: ${VERSION_STRING}")
 
 set(LIB_NAME lib${PROJECT_NAME}-${VERSION_STRING})
