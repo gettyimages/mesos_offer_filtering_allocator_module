@@ -15,7 +15,7 @@ mechanism in Mesos which only works when frameworks adopt it.
 Installation
 ---
 
-1. Install the module library (example: `libofferfilterallocator-1.0.1-16554d9.so`) on your masters
+1. Install the module library (example: `libofferfilterallocator-1.0.1-1fa66fc.so`) on your masters
    - _location is your choice--you'll point to it in configuration_
 2. Configure the `--modules` command-line arg, or `MESOS_MODULES` env variable to use the module
    - example: `--modules=file:///path-to-modules.json`
@@ -25,7 +25,7 @@ Installation
       "libraries":
       [
         {
-          "file": "/path/to/libofferfilterallocator-1.0.1-16554d9.so",
+          "file": "/path/to/libofferfilterallocator-1.0.1-1fa66fc.so",
           "modules":
           [
             {
@@ -102,18 +102,19 @@ Usage
 
 Contributing
 ---
-   This project has been configured to build and test using docker, as it can be quite complicated to set up your C++ development environment.
-   This project assumes that you have a few bare essentials, and uses docker to handle the rest.
 
-   #### Prerequisites
+This project has been configured to build and test using docker, as it can be quite complicated to set up your C++ development environment.
+It is assumed that you have a few bare essentials (`docker`, `docker-machine`), and uses docker to handle the rest.
+
+   #### Prerequisites:
+
    - `docker [1.9+]`
    - `docker-machine [0.8+]` (if running on OSX or Windows)
        - `docker-for-mac` and `docker-for-windows` are not easily configured with the `libprocess` internals
        - a machine named `mesos-modules` will be created (if not found); configure this name in `./docker-machine-env.sh`
 
 
-
-   #### Configuring
+   #### Configuring:
 
    The important configuration points are:
      - change module, library name and `VERSION` in the top section of `./CMakeLists.txt`

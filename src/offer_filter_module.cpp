@@ -51,12 +51,6 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::getOfferFi
     return http::OK(body);
 }
 
-/**
- * Example:
- * `POST /offer-filters
- *  { "hostname": "<hostname" }
- *
- */
 template<>
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::addOfferFilter(
     const http::Request &request)
@@ -222,7 +216,7 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::offerFilte
 
 namespace {
 
-    // Called by the main() of master or agent at startup
+    // Called by the main() of master at startup
     Allocator* create(const Parameters& parameters)
     {
         for (int i = 0; i < parameters.parameter_size(); ++i) {
@@ -234,7 +228,7 @@ namespace {
         if (allocator.isError()) {
             return nullptr;
         }
-        LOG(INFO) << "Created new OfferFilteringHierarchicalDRFAllocator instance";
+        LOG(INFO) << "Created new " MODULE_NAME_STRING " instance";
         return allocator.get();
     }
 
@@ -244,9 +238,9 @@ namespace {
 Module<Allocator> MODULE_NAME(
     MESOS_MODULE_API_VERSION,
     MESOS_VERSION,
-    "Your Org Here",
-    "donotreply@example.org",
-    "Sample module\n"
-    "See: http://example.org/yourmodule.html",
+    "Matt DeBoer",
+    "matt.deboer@gmail.com",
+    "Offer Filtering Allocator Module"
+    "See: https://github.com/gettyimages/mesos_offer_filtering_allocator_module",
     [] () {return true;},
     create);
