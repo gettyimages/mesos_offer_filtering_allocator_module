@@ -104,7 +104,6 @@ Contributing
 ---
 
    #### Prerequisites
-
    - `docker-machine` [0.8+] (if running on OSX or Windows)
        - `docker-for-mac` and `docker-for-windows` are not easily configured with the `libprocess` internals
    - `docker` [1.9+]
@@ -115,17 +114,15 @@ Contributing
    Edit the top section of `./CMakeLists.txt`
 
    #### Building:
-
    ```
    ./build.sh
    ```
 
    #### Testing:
-
    ```
    ./test.sh
    ```
    - _runs a `docker-compose`-based mesos cluster on a single docker machine_
-   - _View the help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`_
+   - _view the live help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`_
 
 ----
