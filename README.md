@@ -15,7 +15,7 @@ mechanism in Mesos which only works when frameworks adopt it.
 Installation
 ---
 
-1. Install the module library (example: `libofferfilterallocator-1.0.1-bb5af73.so`) on your masters
+1. Install the module library (example: `libofferfilterallocator-1.0.1-16554d9.so`) on your masters
    - _location is your choice--you'll point to it in configuration_
 2. Configure the `--modules` command-line arg, or `MESOS_MODULES` env variable to use the module
    - example: `--modules=file:///path-to-modules.json`
@@ -25,7 +25,7 @@ Installation
       "libraries":
       [
         {
-          "file": "/path/to/libofferfilterallocator-1.0.1-bb5af73.so",
+          "file": "/path/to/libofferfilterallocator-1.0.1-16554d9.so",
           "modules":
           [
             {
@@ -102,16 +102,24 @@ Usage
 
 Contributing
 ---
+   This project has been configured to build and test using docker, as it can be quite complicated to set up your C++ development environment.
+   This project assumes that you have a few bare essentials, and uses docker to handle the rest.
 
    #### Prerequisites
-   - `docker-machine` [0.8+] (if running on OSX or Windows)
+   - `docker [1.9+]`
+   - `docker-machine [0.8+]` (if running on OSX or Windows)
        - `docker-for-mac` and `docker-for-windows` are not easily configured with the `libprocess` internals
-   - `docker` [1.9+]
        - a machine named `mesos-modules` will be created (if not found); configure this name in `./docker-machine-env.sh`
+
+
 
    #### Configuring
 
-   Edit the top section of `./CMakeLists.txt`
+   The important configuration points are:
+     - change module, library name and `VERSION` in the top section of `./CMakeLists.txt`
+     - change the name of the docker machine at top of `docker/docker-machine-env.sh`
+     - change the templated `#define` constants in `templates/config.h.in`
+     - change the README (this doc) in `templates/README.md.in`
 
    #### Building:
    ```
@@ -122,7 +130,7 @@ Contributing
    ```
    ./test.sh
    ```
-   - _runs a `docker-compose`-based mesos cluster on a single docker machine_
-   - _view the live help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`_
+     - _runs a `docker-compose`-based mesos cluster on a single docker machine_
+     - _view the live help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`_
 
 ----
