@@ -1,0 +1,77 @@
+version: "2"
+
+services:
+  zk:
+    image: bobrik/zookeeper
+    network_mode: host
+    environment:
+      ZK_CONFIG: tickTime=2000,initLimit=10,syncLimit=5,maxClientCnxns=128,forceSync=no,clientPort=2181
+      ZK_ID: 1
+
+  master:
+    image: mesosphere/mesos-master:1.0.1-1.0.90.rc1.ubuntu1404
+    network_mode: host
+    environment:
+      MESOS_ZK: zk://127.0.0.1:2181/mesos
+      MESOS_QUORUM: 1
+      MESOS_CLUSTER: docker-compose
+      MESOS_REGISTRY: replicated_log
+      MESOS_HOSTNAME: ${DOCKER_IP}
+      LIBPROCESS_IP: ${DOCKER_IP}
+      MESOS_MODULES: file:///src/gen/modules.json
+      MESOS_ALLOCATOR: ${MESOS_ALLOCATOR_NAME}
+    ports:
+      - "5050:5050"
+    volumes:
+      - "${PWD}:/src"
+    depends_on:
+      - zk
+
+  agent-one:
+    image: mesosphere/mesos-slave:1.0.1-1.0.90.rc1.ubuntu1404
+    network_mode: host
+    pid: host
+    environment:
+      MESOS_MASTER: zk://127.0.0.1:2181/mesos
+      MESOS_CONTAINERIZERS: docker,mesos
+      MESOS_PORT: 5051
+      MESOS_RESOURCES: ports(*):[11000-11999]
+      MESOS_HOSTNAME: agent-one
+      LIBPROCESS_IP: ${DOCKER_IP}
+      MESOS_WORK_DIR: /tmp/mesos/agent-one
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - /usr/local/bin/docker:/usr/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zk
+
+  agent-two:
+    image: mesosphere/mesos-slave:1.0.1-1.0.90.rc1.ubuntu1404
+    network_mode: host
+    pid: host
+    environment:
+      MESOS_MASTER: zk://127.0.0.1:2181/mesos
+      MESOS_CONTAINERIZERS: docker,mesos
+      MESOS_PORT: 5052
+      MESOS_RESOURCES: ports(*):[12000-12999]
+      MESOS_HOSTNAME: agent-two
+      LIBPROCESS_IP: ${DOCKER_IP}
+      MESOS_WORK_DIR: /tmp/mesos/agent-two
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - /usr/local/bin/docker:/usr/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zk
+
+  marathon:
+    image: mesosphere/marathon:v1.2.0-RC6
+    network_mode: host
+    environment:
+      MARATHON_MASTER: zk://127.0.0.1:2181/mesos
+    ports:
+      - "8080:8080"
+    depends_on:
+      - zk
+
