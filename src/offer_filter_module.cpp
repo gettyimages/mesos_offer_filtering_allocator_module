@@ -3,7 +3,6 @@
 
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
-#include <mesos/module/anonymous.hpp>
 #include <mesos/module/allocator.hpp>
 
 #include <stout/json.hpp>
@@ -26,11 +25,13 @@ using namespace mesos::modules;
 using process::HELP;
 using process::TLDR;
 using process::DESCRIPTION;
-using mesos::internal::master::allocator::internal::HierarchicalAllocatorProcess;
 using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
 using mesos::allocator::Allocator;
 
-template<>
+namespace gettyimages {
+namespace mesos {
+namespace modules {
+
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::getOfferFilters(
     const http::Request &request)
 {
@@ -51,7 +52,6 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::getOfferFi
     return http::OK(body);
 }
 
-template<>
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::addOfferFilter(
     const http::Request &request)
 {
@@ -110,7 +110,6 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::addOfferFi
     }
 }
 
-template<>
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::removeOfferFilter(
     const http::Request &request)
 {
@@ -147,7 +146,6 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::removeOffe
     return http::NotFound("No filter exists for " + msg);
 }
 
-template<>
 Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
         const string& hostname, const string& agentId) {
 
@@ -160,7 +158,6 @@ Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
     return None();
 }
 
-template<>
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOfferFilters(
     const http::Request &request)
 {
@@ -196,7 +193,6 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
     );
 }
 
-template<>
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::offerFilters(
     const http::Request &request)
 {
@@ -213,9 +209,11 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::offerFilte
     }
 }
 
+} // namespace modules
+} // namespace mesos
+} // namespace gettyimages
 
 namespace {
-
     // Called by the main() of master at startup
     Allocator* create(const Parameters& parameters)
     {
@@ -224,7 +222,7 @@ namespace {
             LOG(INFO) << parameter.key() << ": " << parameter.value();
         }
 
-        Try<Allocator*> allocator = OfferFilteringHierarchicalDRFAllocator::create();
+        Try<Allocator*> allocator = gettyimages::mesos::modules::OfferFilteringHierarchicalDRFAllocator::create();
         if (allocator.isError()) {
             return nullptr;
         }
