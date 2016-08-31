@@ -15,7 +15,7 @@ mechanism in Mesos which only works when frameworks adopt it.
 Installation
 ---
 
-1. Install the module library (example: `libofferfilterallocator-1.0.1-.so`) on your masters
+1. Install the module library (example: `libofferfilterallocator-1.0.1-c52cdba.so`) on your masters
    - _location is your choice--you'll point to it in configuration_
 2. Configure the `--modules` command-line arg, or `MESOS_MODULES` env variable to use the module
    - example: `--modules=file:///path-to-modules.json`
@@ -25,7 +25,7 @@ Installation
       "libraries":
       [
         {
-          "file": "/path/to/libofferfilterallocator-1.0.1-.so",
+          "file": "/path/to/libofferfilterallocator-1.0.1-c52cdba.so",
           "modules":
           [
             {
