@@ -36,6 +36,8 @@ Installation
       ]
     }
     ```
+   - Alternatively, place the (updated to your environment) `modules.json` in the directory configured by `MESOS_MODULES_DIR` env varaible
+     or `--modules-dir` command-line arg.
    - _Note: merge as needed to incoporate other modules_
 3. Configure the `--allocator` command-line arg, or `MESOS_ALLOCATOR` env variable to use the custom allocator
    - example: `--allocator=im_getty_mesos_OfferFilteringAllocator`
@@ -96,6 +98,12 @@ Usage
   current master is not the leader.
 
   Returns `503 SERVICE_UNAVAILABLE` if the leading master cannot be found.
+
+Notes
+---
+
+ - Filters are not (yet) written to the registry (replicated) log, and so will not survive a master failover.
+
 
 ---
 
