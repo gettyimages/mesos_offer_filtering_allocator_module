@@ -2,8 +2,12 @@
 
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
-
 #include <mesos/allocator/allocator.hpp>
+#include <mesos/zookeeper/zookeeper.hpp>
+#include <mesos/zookeeper/contender.hpp>
+
+#include <mesos/state/state.hpp>
+#include <mesos/state/zookeeper.hpp>
 
 #include <master/allocator/mesos/allocator.hpp>
 #include <master/allocator/mesos/hierarchical.hpp>
@@ -11,24 +15,38 @@
 #include <stout/duration.hpp>
 #include <stout/json.hpp>
 #include <stout/os.hpp>
+
 #include <stout/protobuf.hpp>
+
 #include <process/help.hpp>
+#include <process/owned.hpp>
 
 #include "config.h"
 
 using std::string;
+
 using process::Future;
 using process::Process;
 using process::ProcessBase;
-using mesos::SlaveID;
-using mesos::FrameworkID;
-using mesos::Resources;
-using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
-using mesos::internal::master::allocator::DRFSorter;
+using process::Owned;
 using process::HELP;
 using process::TLDR;
 using process::DESCRIPTION;
 using process::AUTHENTICATION;
+using process::UPID;
+using process::PID;
+
+using mesos::SlaveID;
+using mesos::SlaveInfo;
+using mesos::Unavailability;
+using mesos::FrameworkID;
+using mesos::Resources;
+using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
+using mesos::internal::master::allocator::DRFSorter;
+
+using mesos::state::State;
+using mesos::state::Storage;
+using mesos::internal::state::Entry;
 
 namespace http = process::http;
 namespace internal = mesos::internal::master::allocator;
@@ -108,11 +126,26 @@ public:
           ""
       ),
       &OfferFilteringHierarchicalDRFAllocatorProcess::offerFilters);
+
   }
 
   virtual ~OfferFilteringHierarchicalDRFAllocatorProcess() {}
 
   Future<http::Response> offerFilters(const http::Request &request);
+
+  virtual void recover(
+      const int _expectedAgentCount,
+      const hashmap<std::string, Quota>& quotas);
+
+  virtual void addSlave(
+      const SlaveID& slaveId,
+      const SlaveInfo& slaveInfo,
+      const Option<Unavailability>& unavailability,
+      const Resources& total,
+      const hashmap<FrameworkID, Resources>& used);
+
+  virtual void activateSlave(
+      const SlaveID& slaveId);
 
 protected:
 
@@ -125,7 +158,21 @@ protected:
   Future<http::Response> removeOfferFilter(const http::Request &request);
 
 private:
+  Future<http::Response> reportOfferFilters(const hashmap<string, string>& filteredAgents);
+
+  Future<http::Response> persistAndReportOfferFilters();
+
+  hashmap<string, string> getFilteredAgents();
+
   Option<SlaveID> findSlaveID(const string& hostname, const string& agentId);
+
+  void persistFilteredAgents(const hashmap<string, string>& filteredAgents);
+
+  void restoreFilteredAgents();
+
+  Option<string> getLeader(const http::Request &request);
+
+  State* state;
 };
 
 } // namespace modules

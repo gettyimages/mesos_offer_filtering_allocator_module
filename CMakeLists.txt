@@ -18,7 +18,6 @@ message(STATUS "Building Version: ${VERSION_STRING}")
 
 set(LIB_NAME lib${PROJECT_NAME}-${VERSION_STRING})
 set(LIB_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
-set(MESOS_SRCS /mesos/src)
 
 ## ------- directories
 set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
@@ -29,13 +28,24 @@ set(GEN_DIR ${PROJECT_SOURCE_DIR}/gen)
 set(PROJECT_BINARY_DIR ${PROJECT_SOURCE_DIR}/build)
 set(CMAKE_PREFIX_PATH /usr/local)
 
+# find_package(Protobuf REQUIRED)
+
 ## ------- shared configs
+add_definitions(-DPROTOBUF_USE_DLLS)
+
 include_directories(
     ${GEN_DIR}
     ${PROJECT_BINARY_DIR}
     ${CMAKE_BINARY_DIR}
-    ${MESOS_SRCS}
+    ${PROTOBUF_INCLUDE_DIRS}
+    /mesos/src
+    /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
+    /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
+    #/usr/include/zookeeper
 )
+
+# /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
+# /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
 link_directories(/usr/local/lib)
 
 set(CMAKE_CXX_FLAGS

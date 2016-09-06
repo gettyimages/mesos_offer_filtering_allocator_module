@@ -16,8 +16,14 @@ if [[ "start" == "${action}" ]]; then
 
 elif [[ "stop" == "${action}" ]]; then
 
-  ${DOCKER_COMPOSE} kill
-  ${DOCKER_COMPOSE} rm -f
+  shift
+  ${DOCKER_COMPOSE} kill $*
+
+elif [[ "rm" == "${action}" ]]; then
+
+  shift
+  ${DOCKER_COMPOSE} kill $*
+  ${DOCKER_COMPOSE} rm -f $*
 
 elif [[ "logs" == "${action}" ]]; then
 
