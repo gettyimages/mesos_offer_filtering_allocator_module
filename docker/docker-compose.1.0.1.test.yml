@@ -8,20 +8,71 @@ services:
       ZK_CONFIG: tickTime=2000,initLimit=10,syncLimit=5,maxClientCnxns=128,forceSync=no,clientPort=2181
       ZK_ID: 1
 
-  master:
+  zk-web:
+    image: tobilg/zookeeper-webui
+    network_mode: host
+    environment:
+      ZK_DEFAULT_NODE: localhost:2181
+    depends_on:
+      - zk
+
+  master-one:
     image: mesosphere/mesos-master:1.0.1-1.0.90.rc1.ubuntu1404
     network_mode: host
     environment:
       MESOS_ZK: zk://127.0.0.1:2181/mesos
-      MESOS_QUORUM: 1
+      MESOS_QUORUM: 3
       MESOS_CLUSTER: docker-compose
       MESOS_REGISTRY: replicated_log
       MESOS_HOSTNAME: ${DOCKER_IP}
       LIBPROCESS_IP: ${DOCKER_IP}
       MESOS_MODULES: file:///src/gen/modules.json
       MESOS_ALLOCATOR: ${MESOS_ALLOCATOR_NAME}
-    ports:
-      - "5050:5050"
+      MESOS_WORK_DIR: /tmp/mesos/master-one
+    # ports:
+    #   - "5050:5050"
+    volumes:
+      - "${PWD}:/src"
+    depends_on:
+      - zk
+
+  master-two:
+    image: mesosphere/mesos-master:1.0.1-1.0.90.rc1.ubuntu1404
+    network_mode: host
+    environment:
+      MESOS_ZK: zk://127.0.0.1:2181/mesos
+      MESOS_QUORUM: 3
+      MESOS_CLUSTER: docker-compose
+      MESOS_REGISTRY: replicated_log
+      MESOS_HOSTNAME: ${DOCKER_IP}
+      MESOS_PORT: 15050
+      LIBPROCESS_IP: ${DOCKER_IP}
+      MESOS_MODULES: file:///src/gen/modules.json
+      MESOS_ALLOCATOR: ${MESOS_ALLOCATOR_NAME}
+      MESOS_WORK_DIR: /tmp/mesos/master-two
+    # ports:
+    #   - "15050:15050"
+    volumes:
+      - "${PWD}:/src"
+    depends_on:
+      - zk
+
+  master-three:
+    image: mesosphere/mesos-master:1.0.1-1.0.90.rc1.ubuntu1404
+    network_mode: host
+    environment:
+      MESOS_ZK: zk://127.0.0.1:2181/mesos
+      MESOS_QUORUM: 3
+      MESOS_CLUSTER: docker-compose
+      MESOS_REGISTRY: replicated_log
+      MESOS_HOSTNAME: ${DOCKER_IP}
+      MESOS_PORT: 25050
+      LIBPROCESS_IP: ${DOCKER_IP}
+      MESOS_MODULES: file:///src/gen/modules.json
+      MESOS_ALLOCATOR: ${MESOS_ALLOCATOR_NAME}
+      MESOS_WORK_DIR: /tmp/mesos/master-three
+    # ports:
+      # - "25050:25050"
     volumes:
       - "${PWD}:/src"
     depends_on:

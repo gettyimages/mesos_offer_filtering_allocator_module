@@ -8,6 +8,11 @@
 #include <stout/json.hpp>
 #include <stout/os.hpp>
 #include <stout/protobuf.hpp>
+#include <stout/strings.hpp>
+#include <stout/hashmap.hpp>
+#include <stout/option.hpp>
+
+#include <process/once.hpp>
 
 #include "config.h"
 #include "offer_filter_module.hpp"
@@ -16,6 +21,7 @@ using std::map;
 using std::string;
 using std::vector;
 using std::pair;
+using std::ostringstream;
 
 namespace http = process::http;
 
@@ -25,31 +31,35 @@ using namespace mesos::modules;
 using process::HELP;
 using process::TLDR;
 using process::DESCRIPTION;
+using process::Future;
+using mesos::state::ZooKeeperStorage;
 using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
 using mesos::allocator::Allocator;
+using mesos::state::Variable;
+using mesos::internal::state::Entry;
 
 namespace gettyimages {
 namespace mesos {
 namespace modules {
 
+const string FILTERED_AGENTS = "filtered-agents";
+const string CURRENT_MASTER = ":";
+const string ALLOCATOR_FILTERS_ZNODE = "/mesos-allocator-filters";
+
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::getOfferFilters(
     const http::Request &request)
 {
-    JSON::Array filters;
-    if (!slaves.empty()) {
-        foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
-            if (!agent.activated) {
-                JSON::Object filter;
-                filter.values["hostname"] = agent.hostname;
-                filter.values["agentId"] = stringify(agentId);
-                filters.values.push_back(filter);
-            }
+    return reportOfferFilters(getFilteredAgents());
+}
+
+hashmap<string, string> OfferFilteringHierarchicalDRFAllocatorProcess::getFilteredAgents() {
+    hashmap<string, string> filteredAgents;
+    foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
+        if (!agent.activated) {
+            filteredAgents[stringify(agentId)] = agent.hostname;
         }
     }
-
-    JSON::Object body;
-    body.values["filters"] = std::move(filters);
-    return http::OK(body);
+    return filteredAgents;
 }
 
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::addOfferFilter(
@@ -101,9 +111,9 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::addOfferFi
             }
             return http::BadRequest("No such agent matching" + msg);
         } else {
-            LOG(INFO) << "Adding filter for agent " << agentIdToDeactivate ;
+            LOG(INFO) << "Adding filter for agent " << agentIdToDeactivate;
             deactivateSlave(*agentIdToDeactivate);
-            return getOfferFilters(request);
+            return persistAndReportOfferFilters();
         }
     } else {
         return http::BadRequest("body requires 'agentId' and/or 'hostname' attributes");
@@ -128,9 +138,9 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::removeOffe
             if (agent.activated) {
                 return http::NotFound("No filter exists for agent " + stringify(agentId));
             } else {
-                LOG(INFO) << "Activating agent " << agent.hostname << ":" << stringify(agentId);
+                LOG(INFO) << "Activating agent: (" << stringify(agentId) << "," << agent.hostname << ")";
                 activateSlave(agentId);
-                return getOfferFilters(request);
+                return persistAndReportOfferFilters();
             }
             break;
         }
@@ -146,8 +156,32 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::removeOffe
     return http::NotFound("No filter exists for " + msg);
 }
 
+Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::reportOfferFilters(const hashmap<string, string>& filteredAgents = hashmap<string, string>())
+{
+    JSON::Array filters;
+    if (!slaves.empty()) {
+        foreachpair (const string& agentId, const string& hostname, filteredAgents) {
+            JSON::Object filter;
+            filter.values["hostname"] = hostname;
+            filter.values["agentId"] = agentId;
+            filters.values.push_back(filter);
+        }
+    }
+
+    JSON::Object body;
+    body.values["filters"] = std::move(filters);
+    return http::OK(body);
+}
+
+Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::persistAndReportOfferFilters()
+{
+    hashmap<string, string> filteredAgents = getFilteredAgents();
+    persistFilteredAgents(filteredAgents);
+    return reportOfferFilters(filteredAgents);
+}
+
 Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
-        const string& hostname, const string& agentId) {
+        const string& agentId, const string& hostname) {
 
     foreachpair (const SlaveID& agentId_, const Slave& agent, slaves) {
         if ( (hostname.empty() || hostname == agent.hostname) &&
@@ -157,6 +191,8 @@ Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
     }
     return None();
 }
+
+
 
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOfferFilters(
     const http::Request &request)
@@ -171,9 +207,8 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
         return http::BadRequest(body_.error());
     }
 
-    // auto body = body_.get();
-    // auto filters_ = body.find("filters");
-    // if (filters_.isSome()) {
+    auto body = body_.get();
+    if (body.values.count("filters") == 1) {
 
     //     hashset<SlaveID> slaveIds;
 
@@ -184,7 +219,7 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
     //     foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
 
     //     }
-    // }
+    }
 
     return http::OK(JSON::parse(
         "{"
@@ -193,9 +228,64 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
     );
 }
 
+// Create a single string value composed of all existing filters
+void OfferFilteringHierarchicalDRFAllocatorProcess::persistFilteredAgents(const hashmap<string, string>& filteredAgents) {
+
+    ostringstream filteredAgentsStream;
+
+    foreachpair (const string& agentId, const string& hostname, filteredAgents) {
+        filteredAgentsStream << "," << agentId << ":" << hostname;
+    }
+
+    string serialized = filteredAgents.empty() ? "" : filteredAgentsStream.str().substr(1, string::npos);
+
+    state->fetch(FILTERED_AGENTS)
+        .onReady([this, serialized](const Option<Variable>& option) {
+            state->store(option.get().mutate(serialized));
+        });
+}
+
+// Read agent filters from the state store, and re-apply deactivations to
+// the associated slaves; this may be called before all agents have re-registered,
+// which is why we also call this method up addSlave calls.
+void OfferFilteringHierarchicalDRFAllocatorProcess::restoreFilteredAgents() {
+
+    if (state != NULL) {
+        state->fetch(FILTERED_AGENTS)
+            .onReady([this](const Option<Variable>& option) {
+                string serialized = option.get().value();
+                if (!serialized.empty()) {
+                    for (const string& agent: strings::split(serialized, ",")) {
+                        vector<string> parts = strings::split(agent, ":");
+                        Option<SlaveID> opt = findSlaveID(parts[0], parts[1]);
+                        if (opt.isSome()) {
+                            deactivateSlave(opt.get());
+                            LOG(INFO) << "Restored filter for agent: (" << stringify(opt.get()) << "," << slaves[opt.get()].hostname << ")";
+                        } else {
+                            LOG(WARNING) << "Failed to locate filtered agent: (" << parts[0] << ", " << parts[1] << ")";
+                        }
+                    }
+                }
+            });
+    } else {
+        LOG(WARNING) << "State not initialized";
+    }
+}
+
+
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::offerFilters(
     const http::Request &request)
 {
+    bool isLeader;
+    Option<string> leader = getLeader(request);
+    if (leader.isNone()) {
+        // No leader; punt!
+        return http::ServiceUnavailable("No leader elected");
+    } else if (leader.get() != CURRENT_MASTER) {
+        // Redirect the request to the current leader
+        return http::TemporaryRedirect("//" + leader.get() + stringify(request.url));
+    }
+
     if (request.method == "GET") {
         return getOfferFilters(request);
     } else if (request.method == "POST") {
@@ -208,6 +298,101 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::offerFilte
         return http::MethodNotAllowed({"GET","POST","PUT","DELETE"}, request.method);
     }
 }
+
+void OfferFilteringHierarchicalDRFAllocatorProcess::recover(
+      const int _expectedAgentCount,
+      const hashmap<std::string, Quota>& quotas)
+{
+
+    HierarchicalDRFAllocatorProcess::recover(_expectedAgentCount, quotas);
+
+    process::PID<> pid;
+    pid.id = "master";
+    pid.address = process::address();
+
+    http::Response response_ = http::get(pid, "state").get();
+    if (response_.code == http::Status::OK) {
+        auto masterState_ = JSON::parse<JSON::Object>(response_.body);
+        if (!masterState_.isError()) {
+            auto flags = masterState_.get().values["flags"].as<JSON::Object>();
+            auto zk_url = flags.values["zk"].as<JSON::String>().value;
+
+            Try<zookeeper::URL> url = zookeeper::URL::parse(zk_url);
+            if (url.isError()) {
+                LOG(ERROR) << "Invalid {/master/state}.flags.zk: " << url.error();
+            } else {
+                LOG(INFO) << "Created ZooKeeperStorage using zk_url " << url.get().servers;
+                state = new State(new ZooKeeperStorage(url.get().servers, Seconds(10), ALLOCATOR_FILTERS_ZNODE));
+                restoreFilteredAgents();
+            }
+        } else {
+            LOG(WARNING) << "Failed to parse master state: " << masterState_.error();
+        }
+    } else {
+        LOG(WARNING) << "Failed to recover master state: " << response_.status;
+    }
+}
+
+// Gets {hostname}:{port} of the current leader; returns ":" when the current master is leader;
+// returns None when no leader has been elected.
+Option<string> OfferFilteringHierarchicalDRFAllocatorProcess::getLeader(const http::Request &request)
+{
+    process::PID<> pid;
+    pid.id = "master";
+    pid.address = process::address();
+
+    auto response_ = http::get(pid, "state").get();
+    if (response_.code == http::Status::TEMPORARY_REDIRECT) {
+        // Follow redirect to current leader
+        auto location = response_.headers["Location"];
+        return Some(strings::split(location, "/")[2]);
+    }
+
+    if (response_.code == http::Status::OK) {
+        auto masterState_ = JSON::parse<JSON::Object>(response_.body);
+        if (!masterState_.isError()) {
+            auto pid = masterState_.get().values["pid"].as<JSON::String>().value;
+            if (masterState_.get().values.count("leader") == 1) {
+                auto leader = masterState_.get().values["leader"].as<JSON::String>().value;
+                if (leader.empty()) {
+                    return None();
+                } else if (pid == leader) {
+                    return Some(CURRENT_MASTER);
+                } else {
+                    vector<string> parts = strings::split(leader, "@");
+                    return Some(parts[1]);
+                }
+            } else {
+                return None();
+            }
+        } else {
+            LOG(WARNING) << "Failed to recover master state: " << masterState_.error();
+            return None();
+        }
+    } else {
+        LOG(WARNING) << "Failed to recover master state: " << response_.status;
+    }
+}
+
+void OfferFilteringHierarchicalDRFAllocatorProcess::addSlave(
+      const SlaveID& slaveId,
+      const SlaveInfo& slaveInfo,
+      const Option<Unavailability>& unavailability,
+      const Resources& total,
+      const hashmap<FrameworkID, Resources>& used)
+{
+    HierarchicalDRFAllocatorProcess::addSlave(slaveId, slaveInfo, unavailability, total, used);
+    restoreFilteredAgents();
+}
+
+void OfferFilteringHierarchicalDRFAllocatorProcess::activateSlave(const SlaveID& slaveId)
+{
+    // TODO(mdeboer): need to compare this against existing filters and suppress
+    // the call as necessary
+    LOG(INFO) << "----> activateSlave called " << slaveId;
+    HierarchicalDRFAllocatorProcess::activateSlave(slaveId);
+}
+
 
 } // namespace modules
 } // namespace mesos
