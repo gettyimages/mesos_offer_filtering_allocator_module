@@ -8,7 +8,7 @@ Motivation
 
 Help operators to safely perform maintenance on portions of the Apache [Mesos](http://mesos.apache.org/documentation/latest/) cluster by:
 - Providing a cluster state where resource offers are prevented for a given `agent`
-- Providing manipulation of this state via an api endpoint `/offer-filters`
+- Providing manipulation of this state via an api endpoint `/allocator/filters`
 
 Note that this module allows you to temporarily block offers for individual agents.
 This is a (hopefully) temporary alternative to the [maintenance primitives](http://mesos.apache.org/documentation/latest/maintenance/)
