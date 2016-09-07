@@ -41,11 +41,8 @@ include_directories(
     /mesos/src
     /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
     /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
-    #/usr/include/zookeeper
 )
 
-# /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
-# /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
 link_directories(/usr/local/lib)
 
 set(CMAKE_CXX_FLAGS
@@ -55,6 +52,10 @@ set(CMAKE_CXX_FLAGS
 configure_file(${TEMPLATE_DIR}/README.md.in ${PROJECT_SOURCE_DIR}/README.md)
 configure_file(${TEMPLATE_DIR}/config.h.in ${GEN_DIR}/config.h)
 configure_file(${TEMPLATE_DIR}/modules.json.in ${GEN_DIR}/modules.json)
+configure_file(${TEMPLATE_DIR}/release-modules.json.in ${PROJECT_BINARY_DIR}/modules.json)
+configure_file(${TEMPLATE_DIR}/build-vars.sh.in ${PROJECT_BINARY_DIR}/build-vars.sh)
+
+
 
 file(GLOB_RECURSE SRCS ${SOURCE_DIR}/*.cpp)
 add_library(${PROJECT_NAME}-${VERSION_STRING} MODULE ${SRCS})
