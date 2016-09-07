@@ -19,7 +19,7 @@ Installation
 
 1. Install the module library (example: `libofferfilterallocator-1.0.1-vXXX.so`) on your masters
    - _location is your choice--you'll point to it in configuration_
-   - pre-built binaries can be found on the [releases](../releases) tab which consist of the module (`.so` file)
+   - pre-built binaries can be found on the [releases](../../releases) tab which consist of the module (`.so` file)
       and a `modules.json` file which assumes the module itself will be placed at `/usr/local/lib/`; modify
       as needed
 2. Configure the `--modules` command-line arg, or `MESOS_MODULES` env variable to use the module

@@ -21,11 +21,15 @@ user="-u $(id -u $USER):$(id -u $USER)"
 
 echo "Running:: docker run --rm -it ${user} ${entrypoint} -v $(pwd):/src mattdeboer/mesos-module-development:${MESOS_VERSION} ${extra_args}"
 if ! docker run --rm -it ${user} ${entrypoint} -v $(pwd):/src mattdeboer/mesos-module-development:${MESOS_VERSION} ${extra_args}; then
+
   exit 1
+
 fi
 
 if [ ! -z "${release}" ]; then
+
   source ./build/build-vars.sh
   echo "Creating ${LIB_NAME}.tar.gz"
   cd ./build && tar -cvzf ${LIB_NAME}.tar.gz ./${LIB_FILE} ./modules.json && cd ..
+
 fi
