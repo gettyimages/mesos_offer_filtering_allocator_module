@@ -5,6 +5,8 @@ services:
 - docker
 script:
 - make build
+before_deploy:
+- make release
 deploy:
   provider: releases
   api_key:
