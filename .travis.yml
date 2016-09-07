@@ -9,6 +9,7 @@ before_deploy:
 - make release
 deploy:
   provider: releases
+  skip_cleanup: true
   api_key:
     secure: QY9CrwjkHJqNiL5Uuxu4gjblB7W+WALb83B5my2c8Iz2sY3UCA3viKKi0QypnKVGrUdCmRyd/fSrfe5BDHVfRXkWppr+oGXLQa2qgxnj0sdmIthsbY7Sgywk5AySLBhHA/3Q9Z5nWmxd+6uKGRYe2K+FybvSh3MgAqNjo5vhrqvS3R2S3aeLd4dKaJ+1S3hF2sOo7/668ncqiDYdMXUKoG34Q3YonsWAUi0P/TS7gH/46p0BEtDQ1opO58uOk9kQXgIk7k1ob0W53Y55rQiCGrsMcfmZ8gZ5zQL0sbCxHR877QbDW6/NGZNbcnjK3neFzujb3eCXBcRDLJCP4ROpcPMK/wPDh5JATiefHUvjO4+sOoljLd7HwHhidsEBuL8W9qP4VNNwjP8kE3xbyyJTx/+0+R2Ik5u/A+c5sjmF7mKg4aW6iRIOswb5Ynza8DSSGr+0s6nWrAB+DQFchLYEPA0381kWsbbd7zheOBdkYGPwYRhgdLF08xQZrxRsJgiL7noliqOi9nYMr1Bx907fy6HH3SWi/eGiPwiQ6QTedVnhhEFdkl9bAIVcWVvkhOaEazb2kOZlj//eZnii8MnikHxUqim4ZfnPacVFPAOtigNX1NHzVhvZvJ35wrvlW8UZGUpvdj/pI+NKcdqma0mZZSVpdyG7DWJf+I+TQSQsjjw=
   file: $(ls -1 build/*.tar.gz)
