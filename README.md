@@ -1,6 +1,8 @@
 mesos: Offer Filtering Allocator Module
 ===
 
+[![Build Status](https://travis-ci.org/gettyimages/mesos_offer_filtering_allocator_module.svg?branch=master)](https://travis-ci.org/gettyimages/mesos_offer_filtering_allocator_module)
+
 Motivation
 ---
 
@@ -15,7 +17,7 @@ mechanism in Mesos which only works when frameworks adopt it.
 Installation
 ---
 
-1. Install the module library (example: `libofferfilterallocator-1.0.1-v1-rc0-1-ge79116a.so`) on your masters
+1. Install the module library (example: `libofferfilterallocator-1.0.1-vXXX.so`) on your masters
    - _location is your choice--you'll point to it in configuration_
    - pre-built binaries can be found on the [releases](../releases) tab which consist of the module (`.so` file)
       and a `modules.json` file which assumes the module itself will be placed at `/usr/local/lib/`; modify
@@ -28,7 +30,7 @@ Installation
       "libraries":
       [
         {
-          "file": "/path/to/libofferfilterallocator-1.0.1-v1-rc0-1-ge79116a.so",
+          "file": "/path/to/libofferfilterallocator-1.0.1-vXXX.so",
           "modules":
           [
             {
