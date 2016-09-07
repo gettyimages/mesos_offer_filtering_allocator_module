@@ -49,7 +49,6 @@ set(CMAKE_CXX_FLAGS
         "${CMAKE_CXX_FLAGS} -DPICOJSON_USE_INT64 -D__STDC_FORMAT_MACROS -std=c++11")
 
 ## ------- build module and tests
-configure_file(${TEMPLATE_DIR}/README.md.in ${PROJECT_SOURCE_DIR}/README.md)
 configure_file(${TEMPLATE_DIR}/config.h.in ${GEN_DIR}/config.h)
 configure_file(${TEMPLATE_DIR}/modules.json.in ${GEN_DIR}/modules.json)
 configure_file(${TEMPLATE_DIR}/release-modules.json.in ${PROJECT_BINARY_DIR}/modules.json)
