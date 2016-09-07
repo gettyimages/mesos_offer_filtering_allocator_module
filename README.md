@@ -134,7 +134,6 @@ The important configuration points are:
   - change module, library name and `VERSION` in the top section of `./CMakeLists.txt`
   - change the name of the docker machine at top of `docker/docker-machine-env.sh`
   - change the templated `#define` constants in `templates/config.h.in`
-  - change the README (this doc) in `templates/README.md.in`
 
 #### Building:
 ```
@@ -153,5 +152,6 @@ make test
 make dev
 ```
   - builds the module from source
-  - starts a docker-compose cluster on a local machine
+  - starts a multi-master docker-compose cluster on a local machine
+
 ----
