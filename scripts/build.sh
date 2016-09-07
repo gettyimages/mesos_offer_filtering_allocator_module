@@ -26,6 +26,10 @@ fi
 
 if [ ! -z "${release}" ]; then
   source ./build/build-vars.sh
-  $(cd ./build && tar -cvzf ${LIB_NAME}.tar.gz ./${LIB_FILE} ./modules.json)
+  DIR=$(pwd)
+  echo "Creating ${LIB_NAME}.tar.gz"
+  echo "PWD: ${DIR}"
+  cd ./build && tar -cvzf ${LIB_NAME}.tar.gz ./${LIB_FILE} ./modules.json
+  cd $DIR
   echo "Contents of build: " && ls -l ./build
 fi
