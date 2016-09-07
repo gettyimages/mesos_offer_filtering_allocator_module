@@ -24,5 +24,6 @@ fi
 
 if [ ! -z "${release}" ]; then
   source ./build/build-vars.sh
-  cd ./build && tar -cvzf ${LIB_NAME}.tar.gz ./${LIB_FILE} ./modules.json
+  $(cd ./build && tar -cvzf ${LIB_NAME}.tar.gz ./${LIB_FILE} ./modules.json)
+  echo "Contents of build: " && ls -l ./build
 fi
