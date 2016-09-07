@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export MESOS_VERSION=$(cat CMakeLists.txt | grep 'MESOS_VERSION' | head -1 | awk -F '[() ]' '{print $3}')
 
 entrypoint=""
