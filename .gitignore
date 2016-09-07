@@ -5,7 +5,7 @@
 *.cmake
 gen/
 build/
-Makefile
+*/Makefile
 CMakeFiles
 .history
 .vscode
