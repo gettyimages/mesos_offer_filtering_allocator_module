@@ -1,0 +1,14 @@
+{
+  "libraries":
+  [
+    {
+      "file": "/usr/local/lib/@LIB_NAME@@LIB_EXT@",
+      "modules":
+      [
+        {
+          "name": "@MODULE_NAME@"
+        }
+      ]
+    }
+  ]
+}

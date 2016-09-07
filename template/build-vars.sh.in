@@ -1,0 +1,2 @@
+export LIB_NAME="@LIB_NAME@"
+export LIB_FILE="@LIB_NAME@@LIB_EXT@"

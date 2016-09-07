@@ -15,8 +15,11 @@ mechanism in Mesos which only works when frameworks adopt it.
 Installation
 ---
 
-1. Install the module library (example: `libofferfilterallocator-1.0.1-0afdd8b.so`) on your masters
+1. Install the module library (example: `libofferfilterallocator-1.0.1-v1-rc0.so`) on your masters
    - _location is your choice--you'll point to it in configuration_
+   - pre-built binaries can be found on the [releases](../releases) tab which consist of the module (`.so` file)
+      and a `modules.json` file which assumes the module itself will be placed at `/usr/local/lib/`; modify
+      as needed
 2. Configure the `--modules` command-line arg, or `MESOS_MODULES` env variable to use the module
    - example: `--modules=file:///path-to-modules.json`
    - example: `MESOS_MODULES=file:///path-to-modules.json`
@@ -25,7 +28,7 @@ Installation
       "libraries":
       [
         {
-          "file": "/path/to/libofferfilterallocator-1.0.1-0afdd8b.so",
+          "file": "/path/to/libofferfilterallocator-1.0.1-v1-rc0.so",
           "modules":
           [
             {
@@ -133,14 +136,20 @@ The important configuration points are:
 
 #### Building:
 ```
-./build.sh
+make build
 ```
 
 #### Testing:
 ```
-./test.sh
+make test
 ```
   - _runs a `docker-compose`-based mesos cluster on a single docker machine_
   - _view the live help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`_
 
+#### Developing:
+```
+make dev
+```
+  - builds the module from source
+  - starts a docker-compose cluster on a local machine
 ----
