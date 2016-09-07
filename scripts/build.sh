@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export MESOS_VERSION=$(cat CMakeLists.txt | grep 'MESOS_VERSION' | head -1 | awk -F '[() ]' '{print $3}')
 
 entrypoint=""
@@ -6,11 +6,15 @@ extra_args=""
 release=""
 
 if [ "$1" == "release" ]; then
+
   release="true"
+
 elif [ ! -z "$1" ]; then
+
   entrypoint="--entrypoint $1"
   shift
   extra_args=$*
+
 fi
 
 echo "Running:: docker run --rm -it $entrypoint -v $(pwd):/src mattdeboer/mesos-module-development:${MESOS_VERSION} ${extra_args}"
