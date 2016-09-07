@@ -4,7 +4,7 @@ dist: trusty
 services:
 - docker
 script:
-- make release
+- "make release"
 deploy:
   provider: releases
   skip_cleanup: true
