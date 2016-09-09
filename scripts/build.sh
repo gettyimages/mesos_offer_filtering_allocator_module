@@ -19,7 +19,6 @@ fi
 
 user="-u $(id -u $USER):$(id -u $USER)"
 
-echo "Running:: docker run --rm -it ${user} ${entrypoint} -v $(pwd):/src mattdeboer/mesos-module-development:${MESOS_VERSION} ${extra_args}"
 if ! docker run --rm -it ${user} ${entrypoint} -v $(pwd):/src mattdeboer/mesos-module-development:${MESOS_VERSION} ${extra_args}; then
 
   exit 1

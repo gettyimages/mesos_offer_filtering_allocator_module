@@ -6,7 +6,13 @@
       "modules":
       [
         {
-          "name": "@MODULE_NAME@"
+          "name": "@MODULE_NAME@",
+          "parameters": [
+            {
+              "key": "zk_url",
+              "value": "zk://127.0.0.1:2181/mesos-allocator-filters"
+            }
+          ]
         }
       ]
     }

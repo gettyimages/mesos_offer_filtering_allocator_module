@@ -1,13 +1,18 @@
 .PHONY: build test dev release
 test:
-	@scripts/test.sh
+	@scripts/test.sh $(filter-out $@,$(MAKECMDGOALS))
 
 build:
-	@scripts/build.sh
+	@scripts/build.sh $(filter-out $@,$(MAKECMDGOALS))
 
 release:
 	@scripts/build.sh release
 
+dev-restart:
+	@scripts/test.sh rm && scripts/test.sh start && scripts/test.sh logs master-one master-two master-three
+
 dev:
 	@scripts/build.sh && scripts/test.sh rm && scripts/test.sh start && scripts/test.sh logs master-one master-two master-three
 
+%:
+	@:

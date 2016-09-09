@@ -43,14 +43,13 @@ using mesos::FrameworkID;
 using mesos::Resources;
 using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
 using mesos::internal::master::allocator::DRFSorter;
+using mesos::internal::master::allocator::MesosAllocator;
 
 using mesos::state::State;
 using mesos::state::Storage;
 using mesos::internal::state::Entry;
 
 namespace http = process::http;
-namespace internal = mesos::internal::master::allocator;
-
 
 namespace gettyimages {
 namespace mesos {
@@ -58,15 +57,18 @@ namespace modules {
 
 class OfferFilteringHierarchicalDRFAllocatorProcess;
 
-typedef internal::MesosAllocator<OfferFilteringHierarchicalDRFAllocatorProcess>
+typedef MesosAllocator<OfferFilteringHierarchicalDRFAllocatorProcess>
 OfferFilteringHierarchicalDRFAllocator;
+
+const char* ALLOCATOR_PROCESS_ID = "allocator";
 
 
 class OfferFilteringHierarchicalDRFAllocatorProcess : public HierarchicalDRFAllocatorProcess
 {
 public:
+
   OfferFilteringHierarchicalDRFAllocatorProcess()
-  : ProcessBase("allocator")
+  : ProcessBase(ALLOCATOR_PROCESS_ID)
   {
     route("/filters",
       HELP(
@@ -131,6 +133,11 @@ public:
 
   virtual ~OfferFilteringHierarchicalDRFAllocatorProcess() {}
 
+  process::PID<OfferFilteringHierarchicalDRFAllocatorProcess> self() const
+  {
+    return process::PID<OfferFilteringHierarchicalDRFAllocatorProcess>(this);
+  }
+
   Future<http::Response> offerFilters(const http::Request &request);
 
   virtual void recover(
@@ -147,6 +154,8 @@ public:
   virtual void activateSlave(
       const SlaveID& slaveId);
 
+  Try<Nothing> configure(const zookeeper::URL* zk_url);
+
 protected:
 
   Future<http::Response> addOfferFilter(const http::Request &request);
@@ -158,7 +167,7 @@ protected:
   Future<http::Response> removeOfferFilter(const http::Request &request);
 
 private:
-  Future<http::Response> reportOfferFilters(const hashmap<string, string>& filteredAgents);
+  Future<http::Response> toHttpResponse(const hashmap<string, string>& filteredAgents);
 
   Future<http::Response> persistAndReportOfferFilters();
 
@@ -173,6 +182,8 @@ private:
   Option<string> getLeader(const http::Request &request);
 
   State* state;
+
+  const zookeeper::URL* zkUrl;
 };
 
 } // namespace modules

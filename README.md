@@ -14,6 +14,11 @@ Note that this module allows you to temporarily block offers for individual agen
 This is a (hopefully) temporary alternative to the [maintenance primitives](http://mesos.apache.org/documentation/latest/maintenance/)
 mechanism in Mesos which only works when frameworks adopt it.
 
+Use-cases
+- You want to temporarily isolate an agent from new tasks, but would like to keep existing tasks running there
+- You want to take an agent down for maintenance, but allow the currently running batch tasks to complete normally
+
+
 Installation
 ---
 
@@ -104,11 +109,17 @@ Usage
 
   Returns `503 SERVICE_UNAVAILABLE` if the leading master cannot be found.
 
-Notes
+Example (using the provided docker-compose cluster)
 ---
 
- - Filters are not (yet) written to the registry (replicated) log, and so will not survive a master failover.
+In this example, we will:
+1. create a task in Marathon with 2 instances (one on each agent)
+2. create a filter for one of the agents (`agent-one`) so that no new offers are sent
+3. verify that tasks targeted at agent-one are not initiated
+4. remove the filter for agent-one
+5. confirm that the waiting tasks targeted for agent-one are now fulfilled/scheduled
 
+(TODO)
 
 ---
 
