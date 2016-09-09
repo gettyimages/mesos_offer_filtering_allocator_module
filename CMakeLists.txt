@@ -39,8 +39,11 @@ include_directories(
     ${CMAKE_BINARY_DIR}
     ${PROTOBUF_INCLUDE_DIRS}
     /mesos/src
+    /mesos/build/src
+    /mesos/build/include/mesos
     /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
     /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
+
 )
 
 link_directories(/usr/local/lib)

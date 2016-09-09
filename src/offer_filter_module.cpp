@@ -14,6 +14,10 @@
 
 #include <process/once.hpp>
 
+#include <master/master.hpp>
+#include <stout/lambda.hpp>
+
+
 #include "config.h"
 #include "offer_filter_module.hpp"
 
@@ -38,18 +42,52 @@ using mesos::allocator::Allocator;
 using mesos::state::Variable;
 using mesos::internal::state::Entry;
 
+
+// Need a custom dispatch to deal with ()const types
+template <typename R, typename T>
+process::Future<R> dispatch(const process::PID<T>& pid, R (T::*method)()const)
+{
+    std::shared_ptr<process::Promise<R>> promise(new process::Promise<R>());
+
+    std::shared_ptr<std::function<void(process::ProcessBase*)>> f(
+        new std::function<void(process::ProcessBase*)>(
+            [=](process::ProcessBase* process) {
+                assert(process != nullptr);
+                T* t = dynamic_cast<T*>(process);
+                assert(t != nullptr);
+                promise->set((t->*method)());
+            }));
+
+    process::internal::dispatch(pid, f, &typeid(method));
+
+    return promise->future();
+}
+
 namespace gettyimages {
 namespace mesos {
 namespace modules {
 
 const string FILTERED_AGENTS = "filtered-agents";
 const string CURRENT_MASTER = ":";
-const string ALLOCATOR_FILTERS_ZNODE = "/mesos-allocator-filters";
+const string DEFAULT_ZK_URL = "zk://127.0.0.1:2181/mesos-allocator-filters";
+
+
+Try<Nothing> OfferFilteringHierarchicalDRFAllocatorProcess::configure(const zookeeper::URL* zk_url)
+{
+    if (zkUrl == NULL) {
+        zkUrl = new zookeeper::URL(*zk_url);
+        state = new State(new ZooKeeperStorage(zkUrl->servers, Seconds(10), zkUrl->path));
+        LOG(INFO) << "Created ZooKeeperStorage using zk_url " << zkUrl->servers << zkUrl->path;
+        return Try<Nothing>(Nothing());
+    } else {
+        return Try<Nothing>(Error("Attempt to reinitialize ignored"));
+    }
+}
 
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::getOfferFilters(
     const http::Request &request)
 {
-    return reportOfferFilters(getFilteredAgents());
+    return toHttpResponse(getFilteredAgents());
 }
 
 hashmap<string, string> OfferFilteringHierarchicalDRFAllocatorProcess::getFilteredAgents() {
@@ -156,7 +194,8 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::removeOffe
     return http::NotFound("No filter exists for " + msg);
 }
 
-Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::reportOfferFilters(const hashmap<string, string>& filteredAgents = hashmap<string, string>())
+Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::toHttpResponse(
+    const hashmap<string, string>& filteredAgents = hashmap<string, string>())
 {
     JSON::Array filters;
     if (!slaves.empty()) {
@@ -177,7 +216,7 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::persistAnd
 {
     hashmap<string, string> filteredAgents = getFilteredAgents();
     persistFilteredAgents(filteredAgents);
-    return reportOfferFilters(filteredAgents);
+    return toHttpResponse(filteredAgents);
 }
 
 Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
@@ -191,8 +230,6 @@ Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
     }
     return None();
 }
-
-
 
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOfferFilters(
     const http::Request &request)
@@ -305,32 +342,7 @@ void OfferFilteringHierarchicalDRFAllocatorProcess::recover(
 {
 
     HierarchicalDRFAllocatorProcess::recover(_expectedAgentCount, quotas);
-
-    process::PID<> pid;
-    pid.id = "master";
-    pid.address = process::address();
-
-    http::Response response_ = http::get(pid, "state").get();
-    if (response_.code == http::Status::OK) {
-        auto masterState_ = JSON::parse<JSON::Object>(response_.body);
-        if (!masterState_.isError()) {
-            auto flags = masterState_.get().values["flags"].as<JSON::Object>();
-            auto zk_url = flags.values["zk"].as<JSON::String>().value;
-
-            Try<zookeeper::URL> url = zookeeper::URL::parse(zk_url);
-            if (url.isError()) {
-                LOG(ERROR) << "Invalid {/master/state}.flags.zk: " << url.error();
-            } else {
-                LOG(INFO) << "Created ZooKeeperStorage using zk_url " << url.get().servers;
-                state = new State(new ZooKeeperStorage(url.get().servers, Seconds(10), ALLOCATOR_FILTERS_ZNODE));
-                restoreFilteredAgents();
-            }
-        } else {
-            LOG(WARNING) << "Failed to parse master state: " << masterState_.error();
-        }
-    } else {
-        LOG(WARNING) << "Failed to recover master state: " << response_.status;
-    }
+    restoreFilteredAgents();
 }
 
 // Gets {hostname}:{port} of the current leader; returns ":" when the current master is leader;
@@ -341,14 +353,17 @@ Option<string> OfferFilteringHierarchicalDRFAllocatorProcess::getLeader(const ht
     pid.id = "master";
     pid.address = process::address();
 
-    auto response_ = http::get(pid, "state").get();
+    Option<http::Headers> headers;
+    if (request.headers.get("Authorization").isSome()) {
+        headers = Some(http::Headers{{"Authorization", request.headers.get("Authorization").get() }});
+    }
+
+    auto response_ = http::get(pid, "state", None(), headers).get();
     if (response_.code == http::Status::TEMPORARY_REDIRECT) {
         // Follow redirect to current leader
         auto location = response_.headers["Location"];
         return Some(strings::split(location, "/")[2]);
-    }
-
-    if (response_.code == http::Status::OK) {
+    } else if (response_.code == http::Status::OK) {
         auto masterState_ = JSON::parse<JSON::Object>(response_.body);
         if (!masterState_.isError()) {
             auto pid = masterState_.get().values["pid"].as<JSON::String>().value;
@@ -371,6 +386,7 @@ Option<string> OfferFilteringHierarchicalDRFAllocatorProcess::getLeader(const ht
         }
     } else {
         LOG(WARNING) << "Failed to recover master state: " << response_.status;
+        return None();
     }
 }
 
@@ -399,23 +415,50 @@ void OfferFilteringHierarchicalDRFAllocatorProcess::activateSlave(const SlaveID&
 } // namespace gettyimages
 
 namespace {
-    // Called by the main() of master at startup
-    Allocator* create(const Parameters& parameters)
-    {
-        for (int i = 0; i < parameters.parameter_size(); ++i) {
-            Parameter parameter = parameters.parameter(i);
-            LOG(INFO) << parameter.key() << ": " << parameter.value();
-        }
 
-        Try<Allocator*> allocator = gettyimages::mesos::modules::OfferFilteringHierarchicalDRFAllocator::create();
-        if (allocator.isError()) {
-            return nullptr;
+using gettyimages::mesos::modules::OfferFilteringHierarchicalDRFAllocatorProcess;
+using gettyimages::mesos::modules::OfferFilteringHierarchicalDRFAllocator;
+using gettyimages::mesos::modules::DEFAULT_ZK_URL;
+
+// Called by the main() of master at startup
+Allocator* create(const Parameters& parameters)
+{
+    string zk_url = DEFAULT_ZK_URL;
+    for (int i = 0; i < parameters.parameter_size(); ++i) {
+        Parameter parameter = parameters.parameter(i);
+        if (parameter.key() == "zk_url") {
+            zk_url = parameter.value();
+            break;
         }
-        LOG(INFO) << "Created new " MODULE_NAME_STRING " instance";
-        return allocator.get();
     }
 
+    Try<zookeeper::URL> url = zookeeper::URL::parse(zk_url);
+    if (url.isError()) {
+        LOG(ERROR)
+            << "Failed to parse 'zk_url' parameter: '" << zk_url << "'; "
+            << "multi-master failover state will be unavailable for offer filters";
+    }
+
+    Try<Allocator*> allocator = OfferFilteringHierarchicalDRFAllocator::create();
+    if (allocator.isError()) {
+        return nullptr;
+    }
+
+    process::PID<OfferFilteringHierarchicalDRFAllocatorProcess> pid;
+    pid.id = gettyimages::mesos::modules::ALLOCATOR_PROCESS_ID;
+    pid.address = process::address();
+
+    Try<Nothing> configured = process::dispatch(pid, &OfferFilteringHierarchicalDRFAllocatorProcess::configure,
+        const_cast<zookeeper::URL*>(&(url.get()))).get();
+    if (configured.isError()) {
+         LOG(ERROR) << "Failed to configure " MODULE_NAME_STRING ": " << configured.error();
+        return nullptr;
+    }
+    LOG(INFO) << "Created new " MODULE_NAME_STRING " instance";
+    return allocator.get();
 }
+
+} // namespace ::
 
 // Our module definition
 Module<Allocator> MODULE_NAME(
