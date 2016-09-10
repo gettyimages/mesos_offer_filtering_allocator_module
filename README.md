@@ -65,9 +65,7 @@ Usage
   Offer filters are accessed via the exposed API endpoints (relative to mesos master(s))
 
   > `GET /allocator/filters`
-
   List/Get the active allocator filters
-
   - example response when no filters are present:
     ```
     {"filters": []}
