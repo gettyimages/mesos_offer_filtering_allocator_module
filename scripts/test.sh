@@ -30,6 +30,10 @@ elif [[ "logs" == "${action}" ]]; then
   shift
   ${DOCKER_COMPOSE} logs -f $*
 
+elif [[ "ip" == "${action}" ]]; then
+
+  echo "${DOCKER_IP}"
+
 else
 
   echo "Unknown action: ${action}; supported actions are 'start', 'stop', 'logs'"
