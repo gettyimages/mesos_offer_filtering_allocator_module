@@ -62,11 +62,11 @@ Installation
 Usage
 ---
 
-  Offer filters are accessed via the exposed API endpoints (relative to mesos master(s))
+Offer filters are accessed via the exposed API endpoints (relative to mesos master(s))
 
-  > `GET /allocator/filters`
+> `GET /allocator/filters`
 
-  List/Get the active allocator filters
+List/Get the active allocator filters
   - example response when no filters are present:
     ```
     {"filters": []}
@@ -84,9 +84,8 @@ Usage
     }
     ```
 
-  > `POST /allocator/filters`
-  >
-  > `Content-Type: application/json`
+> `POST /allocator/filters`
+> `Content-Type: application/json`
   - body:
     ```
     { "agentId": "VALUE"}
@@ -95,25 +94,25 @@ Usage
     ```
     { "hostname": "VALUE"}
     ```
+Add/Create an allocator filter for the specified agent
 
-  Add/Create an allocator filter for the specified agent:
 
-  > `DELETE /allocator/filters`
+> `DELETE /allocator/filters`
   - parameters:
      - `agentId` id of the agent for which to remove filters ",
      - `hostname` hostname of the agent for which to remove filters ",
 
     _(one of `agentId` or `hostname` is required)_
 
-    Remove/Delete an allocator filter
+Remove/Delete an allocator filter
 
-  All endpoints return `200 OK` when the operation performed successfully,
-  along with the current state of the allocator filters (see `GET /allocator/filters`).
 
-  Returns `307 TEMPORARY_REDIRECT` redirect to the leading master when"
-  current master is not the leader.
-
-  Returns `503 SERVICE_UNAVAILABLE` if the leading master cannot be found.
+All endpoints return:
+  -  `200 OK` when the operation performed successfully,
+    along with the current state of the allocator filters (see `GET /allocator/filters`).
+  - `307 TEMPORARY_REDIRECT` redirect to the leading master when"
+    current master is not the leader.
+  - `503 SERVICE_UNAVAILABLE` if the leading master cannot be found.
 
 ---
 
