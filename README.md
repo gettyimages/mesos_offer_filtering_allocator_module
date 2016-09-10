@@ -225,12 +225,14 @@ make test
 ```
   - _runs a `docker-compose`-based mesos cluster on a single docker machine_
   - _view the live help docs: `open "http://$(make test ip)):5050/help/allocator/filters"`_
+  - _view the Marathon UI: `open "http://$(make test ip)):8080/"`_
 
 #### Developing:
 ```
 make dev
 ```
   - builds the module from source
-  - starts a multi-master docker-compose cluster on a local machine
+  - restarts the local cluster with new module
+  - tails logs of the masters
 
 ----
