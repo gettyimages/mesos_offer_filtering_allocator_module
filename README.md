@@ -67,6 +67,7 @@ Offer filters are accessed via the exposed API endpoints (relative to mesos mast
 > `GET /allocator/filters`
 
 List/Get the active allocator filters
+
   - example response when no filters are present:
     ```
     {"filters": []}
@@ -85,7 +86,9 @@ List/Get the active allocator filters
     ```
 
 > `POST /allocator/filters`
+
 > `Content-Type: application/json`
+
   - body:
     ```
     { "agentId": "VALUE"}
@@ -94,10 +97,12 @@ List/Get the active allocator filters
     ```
     { "hostname": "VALUE"}
     ```
+
 Add/Create an allocator filter for the specified agent
 
 
 > `DELETE /allocator/filters`
+
   - parameters:
      - `agentId` id of the agent for which to remove filters ",
      - `hostname` hostname of the agent for which to remove filters ",
