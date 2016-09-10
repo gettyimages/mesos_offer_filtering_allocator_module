@@ -18,6 +18,8 @@ if [[ "$(uname -a | awk '{print $1}')" != "Linux" ]]; then
 
   eval $(docker-machine env ${MACHINE_NAME})
   export DOCKER_IP=$(docker-machine ip ${MACHINE_NAME})
+else
+  export DOCKER_IP=0.0.0.0
 fi
 
 
