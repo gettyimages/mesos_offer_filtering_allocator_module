@@ -14,9 +14,8 @@ Note that this module allows you to temporarily block offers for individual agen
 This is a (hopefully) temporary alternative to the [maintenance primitives](http://mesos.apache.org/documentation/latest/maintenance/)
 mechanism in Mesos which only works when frameworks adopt it.
 
-Use-cases
-- You want to temporarily isolate an agent from new tasks, but would like to keep existing tasks running there
-- You want to take an agent down for maintenance, but allow the currently running batch tasks to complete normally
+Use-case
+- Isolate an agent from any new tasks, but let existing tasks on the agent keep running (to completion)
 
 
 Installation
@@ -39,7 +38,13 @@ Installation
           "modules":
           [
             {
-              "name": "im_getty_mesos_OfferFilteringAllocator"
+              "name": "im_getty_mesos_OfferFilteringAllocator",
+              "parameters": [
+                {
+                  "key": "zk_url",
+                  "value": "zk://127.0.0.1:2181/mesos-allocator-filters"
+                }
+
             }
           ]
         }
@@ -81,6 +86,8 @@ Usage
     ```
 
   > `POST /allocator/filters`
+  >
+  > `Content-Type: application/json`
   - body:
     ```
     { "agentId": "VALUE"}
@@ -109,17 +116,75 @@ Usage
 
   Returns `503 SERVICE_UNAVAILABLE` if the leading master cannot be found.
 
+---
+
 Example (using the provided docker-compose cluster)
 ---
 
-In this example, we will:
-1. create a task in Marathon with 2 instances (one on each agent)
+This example will show
+
+0. Spin up the test cluster, and view the Marathon UI
+    ```
+    make test && open "http://$(make test ip):8080/"
+    ```
+
+1. create a task in Marathon with 2 instances (this would normally result in one on each agent)
+    ```
+    curl -X POST "http://$(make test ip):8080/v2/apps" \
+    -H 'Content-Type: application/json' -d '
+    {
+      "id": "/test1",
+      "cmd": "while true; do echo \"hello\"; sleep 5; done",
+      "cpus": 0.1,
+      "mem": 32,
+      "disk": 0,
+      "instances": 2
+    }
+    '
+    ```
+    - confirm that there's on instance on each agent (i.e., offers created normally for all agents)
+
 2. create a filter for one of the agents (`agent-one`) so that no new offers are sent
+    ```
+    curl -X POST "http://$(make test ip):5050/allocator/filters" \
+    -H 'Content-Type: application/json' -d '
+    { "hostname": "agent-one" }
+    '
+    ```
+
 3. verify that tasks targeted at agent-one are not initiated
+    ```
+    curl -X POST "http://$(make test ip):8080/v2/apps" \
+    -H 'Content-Type: application/json' -d '
+    {
+      "id": "/test2",
+      "cmd": "while true; do echo \"hello\"; sleep 5; done",
+      "cpus": 0.1,
+      "mem": 32,
+      "disk": 0,
+      "instances": 1,
+      "container": null,
+      "constraints": [
+        [
+          "hostname",
+          "LIKE",
+          "agent-one"
+        ]
+      ]
+    }
+    '
+    ```
+    - view the Marathon UI and note that the task is in a `Waiting` status
+    - note that the original task `/test1` still has an instance running on `agent-one`
+
 4. remove the filter for agent-one
+    ```
+    curl -X DELETE "http://$(make test ip):5050/allocator/filters?hostname=agent-one"
+    ```
+
 5. confirm that the waiting tasks targeted for agent-one are now fulfilled/scheduled
 
-(TODO)
+
 
 ---
 
@@ -156,7 +221,7 @@ make build
 make test
 ```
   - _runs a `docker-compose`-based mesos cluster on a single docker machine_
-  - _view the live help docs: `open "http://$(docker-machine ip mesos-modules):5050/help/allocator/filters"`_
+  - _view the live help docs: `open "http://$(make test ip)):5050/help/allocator/filters"`_
 
 #### Developing:
 ```
