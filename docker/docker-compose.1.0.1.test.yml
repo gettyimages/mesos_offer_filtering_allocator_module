@@ -13,6 +13,7 @@ services:
     network_mode: host
     environment:
       ZK_DEFAULT_NODE: localhost:2181
+      HTTP_PORT: 8181
     depends_on:
       - zk
 
