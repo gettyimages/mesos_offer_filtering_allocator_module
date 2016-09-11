@@ -247,22 +247,59 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
     auto body = body_.get();
     if (body.values.count("filters") == 1) {
 
-    //     hashset<SlaveID> slaveIds;
+        hashset<SlaveID> slaveIds;
+        ostringstream errMsg;
 
-    //     auto filters = body.values["filters"].as<JSON::Array>();
-    //     for ( auto const &filter : filters) {
+        auto filters = body.values["filters"].as<JSON::Array>();
+        for ( auto const &filter : filters.values) {
+            auto values = filter.as<JSON::Object>().values;
 
-    //     }
-    //     foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
+            string agentId;
+            std::map<std::string, JSON::Value>::const_iterator itAgentId = values.find("agentId");
+            if (itAgentId != values.end()) {
+                agentId = itAgentId->second.as<JSON::String>().value;
+            }
 
-    //     }
+            string hostname;
+            std::map<std::string, JSON::Value>::const_iterator itHostname = values.find("hostname");
+            if (itHostname != values.end()) {
+                hostname = itHostname->second.as<JSON::String>().value;
+            }
+
+            auto slaveId = findSlaveID(agentId, hostname);
+            if (slaveId.isNone()) {
+                errMsg << ", ";
+                if (!hostname.empty()) {
+                    errMsg << "[hostname == " << hostname << "]";
+                }
+                if (!hostname.empty() && !agentId.empty()) {
+                    errMsg << " && ";
+                }
+                if (!agentId.empty()) {
+                    errMsg << "[agentId: " << agentId << "]";
+                }
+            } else {
+                slaveIds.insert(slaveId.get());
+            }
+        }
+
+        if (!errMsg.str().empty()) {
+            string error = "One or more agents specified do not exist: " + errMsg.str().substr(2);
+            return http::BadRequest(error);
+        } else {
+            // Loop through all slaves/agents
+            foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
+                hashset<SlaveID>::const_iterator it = slaveIds.find(agentId);
+                if (it != slaveIds.end()) {
+                    deactivateSlave(agentId);
+                } else {
+                    activateSlave(agentId);
+                }
+            }
+        }
     }
 
-    return http::OK(JSON::parse(
-        "{"
-            "\"result\": \"ok (method not implemented)\""
-        "}").get()
-    );
+    return persistAndReportOfferFilters();
 }
 
 // Create a single string value composed of all existing filters
