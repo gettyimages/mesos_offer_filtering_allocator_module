@@ -151,7 +151,7 @@ All endpoints return:
 Example (using the provided docker-compose cluster)
 ---
 
-This example will show
+This example will demonstrate the application of how a filter interacts with existing tasks and new tasks using a simple cli application in Marathon.
 
 0. Spin up the test cluster, and view the Marathon UI
     ```
