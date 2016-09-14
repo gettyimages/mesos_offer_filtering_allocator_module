@@ -172,11 +172,11 @@ This example will show
     }
     '
     ```
-    - confirm that there's on instance on each agent (i.e., offers created normally for all agents)
+    - confirm that there's one instance on each agent (i.e., offers created normally for all agents)
 
 2. create a filter for one of the agents (`agent-one`) so that no new offers are sent
     ```
-    curl -X POST "http://$(make test ip):5050/allocator/filters" \
+    curl -L -X POST "http://$(make test ip):5050/allocator/filters" \
     -H 'Content-Type: application/json' -d '
     { "hostname": "agent-one" }
     '
@@ -209,7 +209,7 @@ This example will show
 
 4. remove the filter for agent-one
     ```
-    curl -X DELETE "http://$(make test ip):5050/allocator/filters?hostname=agent-one"
+    curl -L -X DELETE "http://$(make test ip):5050/allocator/filters?hostname=agent-one"
     ```
 
 5. confirm that the waiting tasks targeted for agent-one are now fulfilled/scheduled
@@ -251,8 +251,8 @@ make build
 make test
 ```
   - _runs a `docker-compose`-based mesos cluster on a single docker machine_
-  - _view the live help docs: `open "http://$(make test ip)):5050/help/allocator/filters"`_
-  - _view the Marathon UI: `open "http://$(make test ip)):8080/"`_
+  - _view the live help docs: `open "http://$(make test ip):5050/help/allocator/filters"`_
+  - _view the Marathon UI: `open "http://$(make test ip):8080/"`_
 
 #### Developing:
 ```
