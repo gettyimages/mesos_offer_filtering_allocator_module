@@ -87,17 +87,25 @@ Try<Nothing> OfferFilteringHierarchicalDRFAllocatorProcess::configure(const zook
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::getOfferFilters(
     const http::Request &request)
 {
-    return toHttpResponse(getFilteredAgents());
+    return http::OK(getFilteredAgentsJSON());
 }
 
-hashmap<string, string> OfferFilteringHierarchicalDRFAllocatorProcess::getFilteredAgents() {
-    hashmap<string, string> filteredAgents;
-    foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
+JSON::Object OfferFilteringHierarchicalDRFAllocatorProcess::getFilteredAgentsJSON() {
+
+    JSON::Array filters;
+
+    foreachpair (const SlaveID& agentId, const Slave& agent, this->slaves) {
         if (!agent.activated) {
-            filteredAgents[stringify(agentId)] = agent.hostname;
+            JSON::Object filter;
+            filter.values["hostname"] = agent.hostname;
+            filter.values["agentId"] = stringify(agentId);
+            filters.values.push_back(filter);
         }
     }
-    return filteredAgents;
+
+    JSON::Object body;
+    body.values["filters"] = std::move(filters);
+    return body;
 }
 
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::addOfferFilter(
@@ -127,7 +135,7 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::addOfferFi
     if (!hostnameParam.empty() || !agentIdParam.empty()) {
 
         const SlaveID* agentIdToDeactivate = nullptr;
-        foreachpair (const SlaveID& agentId, const Slave& slave, slaves) {
+        foreachpair (const SlaveID& agentId, const Slave& slave, this->slaves) {
             if ( (hostnameParam.empty() || hostnameParam == slave.hostname) &&
                     (agentIdParam.empty() || agentIdParam == stringify(agentId)) ) {
 
@@ -170,7 +178,7 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::removeOffe
         return http::BadRequest("One of parameters 'agentId' or 'hostname' is required");
     }
 
-    foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
+    foreachpair (const SlaveID& agentId, const Slave& agent, this->slaves) {
         if ( (agentIdParam.isSome() && agentIdParam.get() == stringify(agentId)) ||
                 (hostnameParam.isSome() && hostnameParam.get() == agent.hostname) ) {
             if (agent.activated) {
@@ -194,35 +202,17 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::removeOffe
     return http::NotFound("No filter exists for " + msg);
 }
 
-Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::toHttpResponse(
-    const hashmap<string, string>& filteredAgents = hashmap<string, string>())
-{
-    JSON::Array filters;
-    if (!slaves.empty()) {
-        foreachpair (const string& agentId, const string& hostname, filteredAgents) {
-            JSON::Object filter;
-            filter.values["hostname"] = hostname;
-            filter.values["agentId"] = agentId;
-            filters.values.push_back(filter);
-        }
-    }
-
-    JSON::Object body;
-    body.values["filters"] = std::move(filters);
-    return http::OK(body);
-}
-
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::persistAndReportOfferFilters()
 {
-    hashmap<string, string> filteredAgents = getFilteredAgents();
-    persistFilteredAgents(filteredAgents);
-    return toHttpResponse(filteredAgents);
+    JSON::Object agentsJson = getFilteredAgentsJSON();
+    persistFilteredAgents(agentsJson);
+    return http::OK(agentsJson);
 }
 
 Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
         const string& agentId, const string& hostname) {
 
-    foreachpair (const SlaveID& agentId_, const Slave& agent, slaves) {
+    foreachpair (const SlaveID& agentId_, const Slave& agent, this->slaves) {
         if ( (hostname.empty() || hostname == agent.hostname) &&
                 (agentId.empty() || agentId == stringify(agentId_)) ) {
             return Some(agentId_);
@@ -288,7 +278,7 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
             return http::BadRequest(error);
         } else {
             // Loop through all slaves/agents
-            foreachpair (const SlaveID& agentId, const Slave& agent, slaves) {
+            foreachpair (const SlaveID& agentId, const Slave& agent, this->slaves) {
                 hashset<SlaveID>::const_iterator it = slaveIds.find(agentId);
                 if (it != slaveIds.end()) {
                     deactivateSlave(agentId);
@@ -303,15 +293,9 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
 }
 
 // Create a single string value composed of all existing filters
-void OfferFilteringHierarchicalDRFAllocatorProcess::persistFilteredAgents(const hashmap<string, string>& filteredAgents) {
+void OfferFilteringHierarchicalDRFAllocatorProcess::persistFilteredAgents(const JSON::Object& filteredAgents) {
 
-    ostringstream filteredAgentsStream;
-
-    foreachpair (const string& agentId, const string& hostname, filteredAgents) {
-        filteredAgentsStream << "," << agentId << ":" << hostname;
-    }
-
-    string serialized = filteredAgents.empty() ? "" : filteredAgentsStream.str().substr(1, string::npos);
+    string serialized = stringify(filteredAgents);
 
     state->fetch(FILTERED_AGENTS)
         .onReady([this, serialized](const Option<Variable>& option) {
@@ -334,7 +318,7 @@ void OfferFilteringHierarchicalDRFAllocatorProcess::restoreFilteredAgents() {
                         Option<SlaveID> opt = findSlaveID(parts[0], parts[1]);
                         if (opt.isSome()) {
                             deactivateSlave(opt.get());
-                            LOG(INFO) << "Restored filter for agent: (" << stringify(opt.get()) << "," << slaves[opt.get()].hostname << ")";
+                            LOG(INFO) << "Restored filter for agent: (" << stringify(opt.get()) << "," << this->slaves[opt.get()].hostname << ")";
                         } else {
                             LOG(WARNING) << "Failed to locate filtered agent: (" << parts[0] << ", " << parts[1] << ")";
                         }

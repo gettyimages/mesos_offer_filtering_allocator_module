@@ -150,7 +150,10 @@ public:
 
   }
 
-  virtual ~OfferFilteringHierarchicalDRFAllocatorProcess() {}
+  virtual ~OfferFilteringHierarchicalDRFAllocatorProcess() {
+      delete zkUrl;
+      delete state;
+  }
 
   process::PID<OfferFilteringHierarchicalDRFAllocatorProcess> self() const
   {
@@ -186,15 +189,16 @@ protected:
   Future<http::Response> removeOfferFilter(const http::Request &request);
 
 private:
+
   Future<http::Response> toHttpResponse(const hashmap<string, string>& filteredAgents);
 
   Future<http::Response> persistAndReportOfferFilters();
 
-  hashmap<string, string> getFilteredAgents();
+  JSON::Object getFilteredAgentsJSON();
 
   Option<SlaveID> findSlaveID(const string& hostname, const string& agentId);
 
-  void persistFilteredAgents(const hashmap<string, string>& filteredAgents);
+  void persistFilteredAgents(const JSON::Object& filteredAgents);
 
   void restoreFilteredAgents();
 
