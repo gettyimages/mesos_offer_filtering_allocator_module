@@ -26,12 +26,11 @@ services:
       MESOS_CLUSTER: docker-compose
       MESOS_REGISTRY: replicated_log
       MESOS_HOSTNAME: ${DOCKER_IP}
+      MESOS_PORT: 5050
       LIBPROCESS_IP: ${DOCKER_IP}
       MESOS_MODULES: file:///src/gen/modules.json
       MESOS_ALLOCATOR: ${MESOS_ALLOCATOR_NAME}
       MESOS_WORK_DIR: /tmp/mesos/master-one
-    # ports:
-    #   - "5050:5050"
     volumes:
       - "${PWD}:/src"
     depends_on:
@@ -51,8 +50,6 @@ services:
       MESOS_MODULES: file:///src/gen/modules.json
       MESOS_ALLOCATOR: ${MESOS_ALLOCATOR_NAME}
       MESOS_WORK_DIR: /tmp/mesos/master-two
-    # ports:
-    #   - "15050:15050"
     volumes:
       - "${PWD}:/src"
     depends_on:
@@ -72,8 +69,6 @@ services:
       MESOS_MODULES: file:///src/gen/modules.json
       MESOS_ALLOCATOR: ${MESOS_ALLOCATOR_NAME}
       MESOS_WORK_DIR: /tmp/mesos/master-three
-    # ports:
-      # - "25050:25050"
     volumes:
       - "${PWD}:/src"
     depends_on:
