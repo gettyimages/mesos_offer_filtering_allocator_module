@@ -155,12 +155,12 @@ This example will demonstrate the application of how a filter interacts with exi
 
 0. Spin up the test cluster, and view the Marathon UI
     ```
-    make test && open "http://$(make test ip):8080/"
+    make run && open "http://$(make run ip):8080/"
     ```
 
 1. create a task in Marathon with 2 instances (this would normally result in one on each agent)
     ```
-    curl -X POST "http://$(make test ip):8080/v2/apps" \
+    curl -X POST "http://$(make run ip):8080/v2/apps" \
     -H 'Content-Type: application/json' -d '
     {
       "id": "/test1",
@@ -176,7 +176,7 @@ This example will demonstrate the application of how a filter interacts with exi
 
 2. create a filter for one of the agents (`agent-one`) so that no new offers are sent
     ```
-    curl -L -X POST "http://$(make test ip):5050/allocator/filters" \
+    curl -L -X POST "http://$(make run ip):5050/allocator/filters" \
     -H 'Content-Type: application/json' -d '
     { "hostname": "agent-one" }
     '
@@ -184,7 +184,7 @@ This example will demonstrate the application of how a filter interacts with exi
 
 3. verify that tasks targeted at agent-one are not initiated
     ```
-    curl -X POST "http://$(make test ip):8080/v2/apps" \
+    curl -X POST "http://$(make run ip):8080/v2/apps" \
     -H 'Content-Type: application/json' -d '
     {
       "id": "/test2",
@@ -209,7 +209,7 @@ This example will demonstrate the application of how a filter interacts with exi
 
 4. remove the filter for agent-one
     ```
-    curl -L -X DELETE "http://$(make test ip):5050/allocator/filters?hostname=agent-one"
+    curl -L -X DELETE "http://$(make run ip):5050/allocator/filters?hostname=agent-one"
     ```
 
 5. confirm that the waiting tasks targeted for agent-one are now fulfilled/scheduled
@@ -248,11 +248,11 @@ make build
 
 #### Testing:
 ```
-make test
+make run
 ```
   - _runs a `docker-compose`-based mesos cluster on a single docker machine_
-  - _view the live help docs: `open "http://$(make test ip):5050/help/allocator/filters"`_
-  - _view the Marathon UI: `open "http://$(make test ip):8080/"`_
+  - _view the live help docs: `open "http://$(make run ip):5050/help/allocator/filters"`_
+  - _view the Marathon UI: `open "http://$(make run ip):8080/"`_
 
 #### Developing:
 ```

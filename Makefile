@@ -1,5 +1,5 @@
 .PHONY: build test dev release
-test:
+run:
 	@scripts/test.sh $(filter-out $@,$(MAKECMDGOALS))
 
 build:
