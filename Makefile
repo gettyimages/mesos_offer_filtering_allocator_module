@@ -1,4 +1,4 @@
-.PHONY: build test dev release
+.PHONY: build run dev release
 run:
 	@scripts/test.sh $(filter-out $@,$(MAKECMDGOALS))
 
