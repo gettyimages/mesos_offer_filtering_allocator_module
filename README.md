@@ -155,7 +155,7 @@ This example will demonstrate the application of how a filter interacts with exi
 
 0. Spin up the test cluster, and view the Marathon UI
     ```
-    make run && open "http://$(make run ip):8080/"
+    make run && while ! curl -s "http://$(make run ip):8080/" >/dev/null; do sleep 1; done && open "http://$(make run ip):8080/"
     ```
 
 1. create a task in Marathon with 2 instances (this would normally result in one on each agent)

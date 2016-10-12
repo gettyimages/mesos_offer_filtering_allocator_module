@@ -1,18 +1,21 @@
-.PHONY: build run dev release
+.PHONY: build run rm dev dev-restart release docker-build-images
 run:
-	@scripts/test.sh $(filter-out $@,$(MAKECMDGOALS))
+	@scripts/run.sh $(filter-out $@,$(MAKECMDGOALS))
 
 build:
 	@scripts/build.sh $(filter-out $@,$(MAKECMDGOALS))
 
 release:
-	@scripts/build.sh release
+	@scripts/build.sh release $(filter-out $@,$(MAKECMDGOALS))
+
+rm:
+	@scripts/run.sh rm
 
 dev-restart:
-	@scripts/test.sh rm && scripts/test.sh start && scripts/test.sh logs master-one master-two master-three
+	@scripts/run.sh rm && scripts/run.sh start && scripts/run.sh logs master-one master-two master-three
 
 dev:
-	@scripts/build.sh && scripts/test.sh rm && scripts/test.sh start && scripts/test.sh logs master-one master-two master-three
+	@scripts/build.sh && scripts/run.sh rm && scripts/run.sh start && scripts/run.sh logs master-one master-two master-three
 
 %:
 	@:

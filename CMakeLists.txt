@@ -4,8 +4,11 @@ cmake_minimum_required(VERSION 3.3)
 project(offerfilterallocator)
 set(MODULE_NAME im_getty_mesos_OfferFilteringAllocator)
 # Match mesos version against which this build is targeted
-set(MESOS_VERSION 1.0.1)
+set(MESOS_VERSION 1.0.1 CACHE STRING "mesos target version")
 ## ------- END: customization
+
+
+string(REPLACE "." "_" MESOS_VERSION_SYMBOL ${MESOS_VERSION})
 
 execute_process(
     COMMAND git describe --tags --always
@@ -41,10 +44,19 @@ include_directories(
     /mesos/src
     /mesos/build/src
     /mesos/build/include/mesos
-    /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
-    /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
-
 )
+
+if(${MESOS_VERSION} MATCHES "1.0.1")
+    include_directories(
+        /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
+        /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
+    )
+elseif( ${MESOS_VERSION} MATCHES "0.28.2")
+    include_directories(
+        /mesos/build/3rdparty/zookeeper-3.4.5/src/c/generated
+        /mesos/build/3rdparty/zookeeper-3.4.5/src/c/include
+    )
+endif()
 
 link_directories(/usr/local/lib)
 

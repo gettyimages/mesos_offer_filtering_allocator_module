@@ -1,9 +1,9 @@
 #include <iostream>
 #include <string>
+#include <utility>
 
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
-#include <mesos/module/allocator.hpp>
 
 #include <stout/json.hpp>
 #include <stout/os.hpp>
@@ -11,9 +11,9 @@
 #include <stout/strings.hpp>
 #include <stout/hashmap.hpp>
 #include <stout/option.hpp>
-
+#include <stout/error.hpp>
+#include <stout/try.hpp>
 #include <process/once.hpp>
-
 #include <master/master.hpp>
 #include <stout/lambda.hpp>
 
@@ -32,14 +32,24 @@ namespace http = process::http;
 using namespace mesos;
 using namespace mesos::modules;
 
-using process::HELP;
-using process::TLDR;
-using process::DESCRIPTION;
-using process::Future;
+#ifdef MESOS__0_28_2
+
+using mesos::internal::state::ZooKeeperStorage;
+using mesos::internal::state::Variable;
+using mesos::master::allocator::Allocator;
+
+#else
+
 using mesos::state::ZooKeeperStorage;
-using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
-using mesos::allocator::Allocator;
 using mesos::state::Variable;
+using mesos::allocator::Allocator;
+
+#endif
+
+using process::Future;
+using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
+
+
 using mesos::internal::state::Entry;
 
 
@@ -74,13 +84,12 @@ const string DEFAULT_ZK_URL = "zk://127.0.0.1:2181/mesos-allocator-filters";
 
 Try<Nothing> OfferFilteringHierarchicalDRFAllocatorProcess::configure(const zookeeper::URL* zk_url)
 {
-    if (zkUrl == NULL) {
-        zkUrl = new zookeeper::URL(*zk_url);
-        state = new State(new ZooKeeperStorage(zkUrl->servers, Seconds(10), zkUrl->path));
-        LOG(INFO) << "Created ZooKeeperStorage using zk_url " << zkUrl->servers << zkUrl->path;
+    if (state == nullptr) {
+        state = new State(new ZooKeeperStorage(zk_url->servers, Seconds(10), zk_url->path));
+        LOG(INFO) << "Created ZooKeeperStorage using zk_url " << zk_url->servers << zk_url->path;
         return Try<Nothing>(Nothing());
     } else {
-        return Try<Nothing>(Error("Attempt to reinitialize ignored"));
+        LOG(INFO) << "Ignored duplicate configuration attempt";
     }
 }
 
@@ -221,6 +230,60 @@ Option<SlaveID> OfferFilteringHierarchicalDRFAllocatorProcess::findSlaveID(
     return None();
 }
 
+pair<hashset<SlaveID>, string> OfferFilteringHierarchicalDRFAllocatorProcess::parseFilters(JSON::Object json)
+{
+    hashset<SlaveID> slaveIds;
+    ostringstream errMsg;
+
+    auto filters = json.values["filters"].as<JSON::Array>();
+    for ( auto const &filter : filters.values) {
+        auto values = filter.as<JSON::Object>().values;
+
+        string agentId;
+        std::map<std::string, JSON::Value>::const_iterator itAgentId = values.find("agentId");
+        if (itAgentId != values.end()) {
+            agentId = itAgentId->second.as<JSON::String>().value;
+        }
+
+        string hostname;
+        std::map<std::string, JSON::Value>::const_iterator itHostname = values.find("hostname");
+        if (itHostname != values.end()) {
+            hostname = itHostname->second.as<JSON::String>().value;
+        }
+
+        auto slaveId = findSlaveID(agentId, hostname);
+        if (slaveId.isNone()) {
+            errMsg << ", ";
+            if (!hostname.empty()) {
+                errMsg << "[hostname == " << hostname << "]";
+            }
+            if (!hostname.empty() && !agentId.empty()) {
+                errMsg << " && ";
+            }
+            if (!agentId.empty()) {
+                errMsg << "[agentId: " << agentId << "]";
+            }
+        } else {
+            slaveIds.insert(slaveId.get());
+        }
+    }
+
+    string error = !errMsg.str().empty() ? errMsg.str().substr(2) : "";
+    return std::make_pair(slaveIds, error);
+}
+
+void OfferFilteringHierarchicalDRFAllocatorProcess::applyFilters(hashset<SlaveID> agentIds)
+{
+    foreachpair (const SlaveID& agentId, const Slave& agent, this->slaves) {
+        hashset<SlaveID>::const_iterator it = agentIds.find(agentId);
+        if (it != agentIds.end()) {
+            deactivateSlave(agentId);
+        } else {
+            activateSlave(agentId);
+        }
+    }
+}
+
 Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOfferFilters(
     const http::Request &request)
 {
@@ -236,61 +299,18 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
 
     auto body = body_.get();
     if (body.values.count("filters") == 1) {
-
-        hashset<SlaveID> slaveIds;
-        ostringstream errMsg;
-
-        auto filters = body.values["filters"].as<JSON::Array>();
-        for ( auto const &filter : filters.values) {
-            auto values = filter.as<JSON::Object>().values;
-
-            string agentId;
-            std::map<std::string, JSON::Value>::const_iterator itAgentId = values.find("agentId");
-            if (itAgentId != values.end()) {
-                agentId = itAgentId->second.as<JSON::String>().value;
-            }
-
-            string hostname;
-            std::map<std::string, JSON::Value>::const_iterator itHostname = values.find("hostname");
-            if (itHostname != values.end()) {
-                hostname = itHostname->second.as<JSON::String>().value;
-            }
-
-            auto slaveId = findSlaveID(agentId, hostname);
-            if (slaveId.isNone()) {
-                errMsg << ", ";
-                if (!hostname.empty()) {
-                    errMsg << "[hostname == " << hostname << "]";
-                }
-                if (!hostname.empty() && !agentId.empty()) {
-                    errMsg << " && ";
-                }
-                if (!agentId.empty()) {
-                    errMsg << "[agentId: " << agentId << "]";
-                }
-            } else {
-                slaveIds.insert(slaveId.get());
-            }
-        }
-
-        if (!errMsg.str().empty()) {
-            string error = "One or more agents specified do not exist: " + errMsg.str().substr(2);
-            return http::BadRequest(error);
+        auto filters = parseFilters(body);
+        if (!filters.second.empty()) {
+            return http::BadRequest("One or more agents specified do not exist: " + filters.second);
         } else {
-            // Loop through all slaves/agents
-            foreachpair (const SlaveID& agentId, const Slave& agent, this->slaves) {
-                hashset<SlaveID>::const_iterator it = slaveIds.find(agentId);
-                if (it != slaveIds.end()) {
-                    deactivateSlave(agentId);
-                } else {
-                    activateSlave(agentId);
-                }
-            }
+            applyFilters(filters.first);
         }
     }
 
     return persistAndReportOfferFilters();
 }
+
+
 
 // Create a single string value composed of all existing filters
 void OfferFilteringHierarchicalDRFAllocatorProcess::persistFilteredAgents(const JSON::Object& filteredAgents) {
@@ -313,14 +333,20 @@ void OfferFilteringHierarchicalDRFAllocatorProcess::restoreFilteredAgents() {
             .onReady([this](const Option<Variable>& option) {
                 string serialized = option.get().value();
                 if (!serialized.empty()) {
-                    for (const string& agent: strings::split(serialized, ",")) {
-                        vector<string> parts = strings::split(agent, ":");
-                        Option<SlaveID> opt = findSlaveID(parts[0], parts[1]);
-                        if (opt.isSome()) {
-                            deactivateSlave(opt.get());
-                            LOG(INFO) << "Restored filter for agent: (" << stringify(opt.get()) << "," << this->slaves[opt.get()].hostname << ")";
-                        } else {
-                            LOG(WARNING) << "Failed to locate filtered agent: (" << parts[0] << ", " << parts[1] << ")";
+                    LOG(INFO) << "Attepting to restore filtered agents: " << serialized;
+                    Try<JSON::Object> body_ = JSON::parse<JSON::Object>(serialized);
+                    if (body_.isError()) {
+                        LOG(ERROR) << "Failed to parse serialized filters '" << serialized << "': " << body_.error();
+                    } else {
+                        auto body = body_.get();
+                        if (body.values.count("filters") == 1) {
+
+                            auto filters = parseFilters(body);
+                            if (!filters.second.empty()) {
+                                LOG(WARNING) << "One or more filtered agents could not be resolved: " << filters.second;
+                            }
+
+                            applyFilters(filters.first);
                         }
                     }
                 }
@@ -458,6 +484,8 @@ Allocator* create(const Parameters& parameters)
         LOG(ERROR)
             << "Failed to parse 'zk_url' parameter: '" << zk_url << "'; "
             << "multi-master failover state will be unavailable for offer filters";
+    } else {
+        LOG(INFO) << "Using 'zk_url': " << zk_url;
     }
 
     Try<Allocator*> allocator = OfferFilteringHierarchicalDRFAllocator::create();
@@ -489,5 +517,5 @@ Module<Allocator> MODULE_NAME(
     "matt.deboer@gmail.com",
     "Offer Filtering Allocator Module"
     "See: https://github.com/gettyimages/mesos_offer_filtering_allocator_module",
-    [] () {return true;},
+    NULL,
     create);

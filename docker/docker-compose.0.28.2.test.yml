@@ -2,7 +2,8 @@ version: "2"
 
 services:
   zk:
-    image: bobrik/zookeeper
+    #image: bobrik/zookeeper
+    image: jplock/zookeeper:3.4.5
     network_mode: host
     environment:
       ZK_CONFIG: tickTime=2000,initLimit=10,syncLimit=5,maxClientCnxns=128,forceSync=no,clientPort=2181
@@ -18,7 +19,7 @@ services:
       - zk
 
   master-one:
-    image: mesosphere/mesos-master:1.0.1-1.0.90.rc1.ubuntu1404
+    image: mesosphere/mesos-master:0.28.2-2.0.27.ubuntu1404
     network_mode: host
     environment:
       MESOS_ZK: zk://127.0.0.1:2181/mesos
@@ -33,12 +34,11 @@ services:
       MESOS_WORK_DIR: /tmp/mesos/master-one
     volumes:
       - "${PWD}:/src"
-    user: ${DOCKER_USER}
     depends_on:
       - zk
 
   master-two:
-    image: mesosphere/mesos-master:1.0.1-1.0.90.rc1.ubuntu1404
+    image: mesosphere/mesos-master:0.28.2-2.0.27.ubuntu1404
     network_mode: host
     environment:
       MESOS_ZK: zk://127.0.0.1:2181/mesos
@@ -53,12 +53,11 @@ services:
       MESOS_WORK_DIR: /tmp/mesos/master-two
     volumes:
       - "${PWD}:/src"
-    user: ${DOCKER_USER}
     depends_on:
       - zk
 
   master-three:
-    image: mesosphere/mesos-master:1.0.1-1.0.90.rc1.ubuntu1404
+    image: mesosphere/mesos-master:0.28.2-2.0.27.ubuntu1404
     network_mode: host
     environment:
       MESOS_ZK: zk://127.0.0.1:2181/mesos
@@ -73,12 +72,11 @@ services:
       MESOS_WORK_DIR: /tmp/mesos/master-three
     volumes:
       - "${PWD}:/src"
-    user: ${DOCKER_USER}
     depends_on:
       - zk
 
   agent-one:
-    image: mesosphere/mesos-slave:1.0.1-1.0.90.rc1.ubuntu1404
+    image: mesosphere/mesos-slave:0.28.2-2.0.27.ubuntu1404
     network_mode: host
     pid: host
     environment:
@@ -97,7 +95,7 @@ services:
       - zk
 
   agent-two:
-    image: mesosphere/mesos-slave:1.0.1-1.0.90.rc1.ubuntu1404
+    image: mesosphere/mesos-slave:0.28.2-2.0.27.ubuntu1404
     network_mode: host
     pid: host
     environment:
@@ -116,7 +114,7 @@ services:
       - zk
 
   marathon:
-    image: mesosphere/marathon:v1.2.0-RC6
+    image: mesosphere/marathon:v1.1.1
     network_mode: host
     environment:
       MARATHON_MASTER: zk://127.0.0.1:2181/mesos

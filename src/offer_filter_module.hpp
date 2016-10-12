@@ -2,12 +2,26 @@
 
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
+
+#ifdef MESOS__0_28_2
+
+#include <mesos/module/allocator.hpp>
+#include <mesos/master/allocator.hpp>
+#include <master/allocator/mesos/allocator.hpp>
+#include <zookeeper/zookeeper.hpp>
+#include <state/state.hpp>
+#include <state/zookeeper.hpp>
+
+#else
+
+#include <mesos/module/allocator.hpp>
 #include <mesos/allocator/allocator.hpp>
 #include <mesos/zookeeper/zookeeper.hpp>
 #include <mesos/zookeeper/contender.hpp>
-
 #include <mesos/state/state.hpp>
 #include <mesos/state/zookeeper.hpp>
+
+#endif
 
 #include <master/allocator/mesos/allocator.hpp>
 #include <master/allocator/mesos/hierarchical.hpp>
@@ -15,6 +29,7 @@
 #include <stout/duration.hpp>
 #include <stout/json.hpp>
 #include <stout/os.hpp>
+#include <stout/hashmap.hpp>
 
 #include <stout/protobuf.hpp>
 
@@ -23,16 +38,51 @@
 
 #include "config.h"
 
+#ifdef MESOS__0_28_2
+// backports from mesos 1.0.x
+inline std::string TLDR(const std::string& tldr)
+{
+  return tldr + "\n";
+}
+
+template <typename... T>
+inline std::string DESCRIPTION(T&&... args)
+{
+  return strings::join("\n", std::forward<T>(args)..., "\n");
+}
+
+inline std::string AUTHENTICATION(bool required)
+{
+  if (required) {
+    return "This endpoint requires authentication iff HTTP authentication is\n"
+           "enabled.\n";
+  }
+  return "This endpoint does not require authentication.\n";
+}
+
+using mesos::internal::state::State;
+using mesos::internal::state::Storage;
+
+#else
+
+using process::TLDR;
+using process::DESCRIPTION;
+using process::AUTHENTICATION;
+
+using mesos::state::State;
+using mesos::state::Storage;
+
+#endif
+
 using std::string;
+using std::pair;
 
 using process::Future;
 using process::Process;
 using process::ProcessBase;
 using process::Owned;
 using process::HELP;
-using process::TLDR;
-using process::DESCRIPTION;
-using process::AUTHENTICATION;
+
 using process::UPID;
 using process::PID;
 
@@ -44,9 +94,6 @@ using mesos::Resources;
 using mesos::internal::master::allocator::HierarchicalDRFAllocatorProcess;
 using mesos::internal::master::allocator::DRFSorter;
 using mesos::internal::master::allocator::MesosAllocator;
-
-using mesos::state::State;
-using mesos::state::Storage;
 using mesos::internal::state::Entry;
 
 namespace http = process::http;
@@ -143,16 +190,15 @@ public:
               "---",
               "provided by: " MODULE_FILE_NAME_STRING
               ),
-          AUTHENTICATION(true),
-          ""
+          AUTHENTICATION(true)
       ),
       &OfferFilteringHierarchicalDRFAllocatorProcess::offerFilters);
 
+    state = NULL;
   }
 
   virtual ~OfferFilteringHierarchicalDRFAllocatorProcess() {
-      delete zkUrl;
-      delete state;
+    delete state;
   }
 
   process::PID<OfferFilteringHierarchicalDRFAllocatorProcess> self() const
@@ -203,6 +249,10 @@ private:
   void restoreFilteredAgents();
 
   Option<string> getLeader(const http::Request &request);
+
+  void applyFilters(hashset<SlaveID> agentIds);
+
+  pair<hashset<SlaveID>, string> parseFilters(JSON::Object json);
 
   State* state;
 

@@ -5,6 +5,7 @@
 *.cmake
 gen/
 build/
+dist/
 */Makefile
 CMakeFiles
 .history

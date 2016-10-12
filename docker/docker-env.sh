@@ -11,13 +11,24 @@ if [[ "$(uname -a | awk '{print $1}')" != "Linux" ]]; then
     docker-machine create -d ${MACHINE_DRIVER} ${MACHINE_NAME}
   fi
 
-  if [[ -z $(docker-machine ls | grep "mesos" | grep "Running") ]]; then
+  if [[ -z $(docker-machine ls | grep "mesos" | grep "Running" | grep -v "Unknown") ]]; then
     echo "Restarting machine ${MACHINE_NAME}..."
-    docker-machine restart ${MACHINE_NAME}
+    if ! docker-machine restart ${MACHINE_NAME}; then
+      echo "Failed to restart the machine ${MACHINE_NAME}; recreate it instead..."
+      docker-machine rm -f ${MACHINE_NAME} && docker-machine create -d ${MACHINE_DRIVER} ${MACHINE_NAME}
+    fi
   fi
 
-  eval $(docker-machine env ${MACHINE_NAME})
-  export DOCKER_IP=$(docker-machine ip ${MACHINE_NAME})
+  if ! eval $(docker-machine env ${MACHINE_NAME}); then
+    echo "Failed to setup docker-machine environment for ${MACHINE_NAME}; punt!"
+    exit 1
+  fi
+
+  docker-machine ssh ${MACHINE_NAME} "sudo ntpclient -s -h pool.ntp.org >/dev/null"
+  if ! export DOCKER_IP=$(docker-machine ip ${MACHINE_NAME}); then
+    echo "Failed to get docker-machine ip for ${MACHINE_NAME}; punt!"
+    exit 1
+  fi
 else
   export DOCKER_IP=0.0.0.0
 fi
