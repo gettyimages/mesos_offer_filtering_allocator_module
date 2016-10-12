@@ -40,6 +40,6 @@ if [ ! -z "${release}" ]; then
   source ./build/build-vars.sh
   echo "Creating ${LIB_NAME}.tar.gz"
   cd ./build && tar -cvzf ${LIB_NAME}.tar.gz ./${LIB_FILE} ./modules.json && cd ..
-  mkdir ./dist && mv ./build/${LIB_NAME}.tar.gz ./dist/
+  mkdir -p ./dist && mv ./build/${LIB_NAME}.tar.gz ./dist/
 
 fi
