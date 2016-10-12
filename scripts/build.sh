@@ -1,7 +1,6 @@
 #!/bin/bash
 DEFAULT_MESOS_VERSION=$(cat CMakeLists.txt | grep 'MESOS_VERSION' | head -1 | awk -F '[() ]' '{print $3}')
 export MESOS_VERSION=${MESOS_VERSION:-$DEFAULT_MESOS_VERSION}
-export DOCKER_USER="$(id -u $USER):$(id -g $USER)"
 
 entrypoint=""
 extra_args=""
@@ -25,7 +24,12 @@ if ! docker inspect -f '{{.Id}}' "mattdeboer/mesos-module-development:${MESOS_VE
   fi
 fi
 
-if ! docker run --rm -it ${entrypoint} -v $(pwd):/src mattdeboer/mesos-module-development:${MESOS_VERSION} ${extra_args}; then
+user_clause=""
+if [ "$(uname -a | awk '{print $1}')" == "Linux" ]; then
+  user_clause="-u $(id -u $USER):$(id -g $USER)"
+fi
+
+if ! docker run --rm -it ${user_clause} ${entrypoint} -v $(pwd):/src mattdeboer/mesos-module-development:${MESOS_VERSION} ${extra_args}; then
 
   exit 1
 

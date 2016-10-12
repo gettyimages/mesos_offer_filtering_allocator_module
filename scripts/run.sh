@@ -10,7 +10,6 @@ DEFAULT_MESOS_VERSION=$(cat CMakeLists.txt | grep 'MESOS_VERSION' | head -1 | aw
 export MESOS_VERSION=${MESOS_VERSION:-$DEFAULT_MESOS_VERSION}
 export MESOS_ALLOCATOR_NAME=$(cat CMakeLists.txt | grep 'MODULE_NAME' | head -1 | awk -F '[() ]' '{print $3}')
 export DOCKER_COMPOSE="docker-compose --file docker/docker-compose.${MESOS_VERSION}.test.yml"
-export DOCKER_USER="$(id -u $USER):$(id -g $USER)"
 
 if [[ "start" == "${action}" ]]; then
 

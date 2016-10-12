@@ -31,6 +31,7 @@ if [[ "$(uname -a | awk '{print $1}')" != "Linux" ]]; then
   fi
 else
   export DOCKER_IP=0.0.0.0
+  export DOCKER_USER="$(id -u $USER):$(id -g $USER)"
 fi
 
 

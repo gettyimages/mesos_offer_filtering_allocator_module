@@ -245,6 +245,12 @@ The important configuration points are:
 ```
 make build
 ```
+To build for an alternate target version (than the default of 1.0.1), export the `MESOS_VERSION` env variable.
+```
+export MESOS_VERSION=0.28.2
+```
+Then all other commands will target that version.
+_Note that specific docker-compose setups and build images have to be created to support a new version._
 
 #### Testing:
 ```

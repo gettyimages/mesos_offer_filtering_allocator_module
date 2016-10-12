@@ -4,8 +4,8 @@ dist: trusty
 services:
 - docker
 script:
-- "MESOS_VERSION=1.0.1 make release"
-- "MESOS_VERSION=0.28.2 make release"
+- 'MESOS_VERSION=1.0.1 make release'
+- 'MESOS_VERSION=0.28.2 make release'
 deploy:
   provider: releases
   skip_cleanup: true
