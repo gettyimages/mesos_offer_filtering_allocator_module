@@ -312,7 +312,7 @@ Future<http::Response> OfferFilteringHierarchicalDRFAllocatorProcess::updateOffe
 
 
 
-// Create a single string value composed of all existing filters
+// Store filters as JSON structure
 void OfferFilteringHierarchicalDRFAllocatorProcess::persistFilteredAgents(const JSON::Object& filteredAgents) {
 
     string serialized = stringify(filteredAgents);
@@ -325,7 +325,7 @@ void OfferFilteringHierarchicalDRFAllocatorProcess::persistFilteredAgents(const 
 
 // Read agent filters from the state store, and re-apply deactivations to
 // the associated slaves; this may be called before all agents have re-registered,
-// which is why we also call this method up addSlave calls.
+// which is why we also call this method upon addSlave calls.
 void OfferFilteringHierarchicalDRFAllocatorProcess::restoreFilteredAgents() {
 
     if (state != NULL) {
@@ -345,7 +345,8 @@ void OfferFilteringHierarchicalDRFAllocatorProcess::restoreFilteredAgents() {
                             if (!filters.second.empty()) {
                                 LOG(WARNING) << "One or more filtered agents could not be resolved: " << filters.second;
                             }
-
+                            // This event must take place AFTER the new leader has sufficiently recovered
+                            // when it occurrs too soon, it can result in failed recovery!
                             applyFilters(filters.first);
                         }
                     }
