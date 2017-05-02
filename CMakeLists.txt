@@ -41,20 +41,21 @@ include_directories(
     ${PROJECT_BINARY_DIR}
     ${CMAKE_BINARY_DIR}
     ${PROTOBUF_INCLUDE_DIRS}
-    /mesos/src
     /mesos/build/src
     /mesos/build/include/mesos
+    /mesos/src
 )
 
-if(${MESOS_VERSION} MATCHES "1.0.1")
-    include_directories(
-        /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
-        /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
-    )
-elseif( ${MESOS_VERSION} MATCHES "0.28.2")
+
+if( ${MESOS_VERSION} MATCHES "0.28.2")
     include_directories(
         /mesos/build/3rdparty/zookeeper-3.4.5/src/c/generated
         /mesos/build/3rdparty/zookeeper-3.4.5/src/c/include
+    )
+else()
+    include_directories(
+        /mesos/build/3rdparty/zookeeper-3.4.8/src/c/generated
+        /mesos/build/3rdparty/zookeeper-3.4.8/src/c/include
     )
 endif()
 
@@ -68,7 +69,6 @@ configure_file(${TEMPLATE_DIR}/config.h.in ${GEN_DIR}/config.h)
 configure_file(${TEMPLATE_DIR}/modules.json.in ${GEN_DIR}/modules.json)
 configure_file(${TEMPLATE_DIR}/release-modules.json.in ${PROJECT_BINARY_DIR}/modules.json)
 configure_file(${TEMPLATE_DIR}/build-vars.sh.in ${PROJECT_BINARY_DIR}/build-vars.sh)
-
 
 
 file(GLOB_RECURSE SRCS ${SOURCE_DIR}/*.cpp)
